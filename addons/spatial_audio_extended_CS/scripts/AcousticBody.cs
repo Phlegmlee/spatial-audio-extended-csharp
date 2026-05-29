@@ -5,7 +5,7 @@ namespace SpatialAudioCS;
 /// <summary>
 /// TODO: Documentation
 /// </summary>
-[Tool, Icon("addons/spatial_audio_extended_CS/assets/acoustic_body.svg")]
+[Tool, Icon("addons/spatial_audio_extended_CS/assets/acoustic_body.svg"), GlobalClass]
 public partial class AcousticBody : Node
 {
 	#region Exports
