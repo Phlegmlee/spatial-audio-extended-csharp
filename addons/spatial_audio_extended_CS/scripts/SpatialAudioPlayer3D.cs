@@ -9,6 +9,65 @@ namespace SpatialAudioCS;
 [Tool, Icon("uid://diaqpjedywsus"), GlobalClass]
 public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 {
+	#region Public API
+
+	/// <summary>
+	/// Designed as an override to <see cref="AudioStreamPlayer3D.Play"/>.
+	/// <para>When <see cref="EnableSoundDelay"/> is on, playback is delayed based on 
+	/// listener distance and <see cref="SpeedOfSound"/></para>
+	/// When <see cref="EnableSoundDelay"/>
+	/// </summary>
+	/// <param name="fromPosition">Position in seconds to start playing.</param>
+	public void PlayWithDelay(float fromPosition = 0.0f)
+	{
+		if (Engine.IsEditorHint() || !EnableSoundDelay)
+		{
+			SetPlayInitiated();
+			base.Play(fromPosition);
+			EmitSignal(SignalName.SpatialAudioPlaybackStarted);
+			return;
+		}
+
+		Node3D listener = GetListener();
+		if (listener == null)
+		{
+			SetPlayInitiated();
+			base.Play(fromPosition);
+			return;
+		}
+
+		float distance = GlobalPosition.DistanceTo(listener.GlobalPosition);
+		float delay = distance / SpeedOfSound;
+
+		if (delay < 0.01)
+		{
+			SetPlayInitiated();
+			base.Play(fromPosition);
+			return;
+		}
+
+		SetPlayInitiated();
+
+		if (_pendingDelayTimer != null && _pendingDelayTimer.TimeLeft > 0.0)
+		{
+			_pendingDelayTimer.Timeout -= () => DeferredPlay(fromPosition);
+		}
+
+		_pendingDelayTimer = GetTree().CreateTimer(delay);
+		_pendingDelayTimer.Timeout += () => DeferredPlay(fromPosition);
+	}
+
+	/// <summary>
+	/// Override for base Stop() to emit signal.
+	/// </summary>
+	new public void Stop()
+	{
+		base.Stop();
+		EmitSignal(SignalName.SpatialAudioPlaybackStopped);
+	}
+
+	#endregion
+
 	#region Signals - Zones
 
 	/// <summary>
@@ -1111,7 +1170,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private SceneTreeTimer _pendingDelayTimer = null;
 
-	private int _playInitiatedTime = -1;
+	private ulong _playInitiatedTime = 1;
 
 	private int _playInitiatedDuration = 0;
 
@@ -1179,7 +1238,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	{
 		_externalVolumeDbOffset = offset;
 	}
-	
+
 	internal float GetExternalVolumeDbOffset()
 	{
 		return _externalVolumeDbOffset;
@@ -1238,12 +1297,6 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 #endif
 	#endregion
 
-	#region Sound Speed Delay
-
-	// TODO: Sound Speed Delay
-
-	#endregion
-
 	#region Lifecycle
 
 	// TODO: Lifecycle
@@ -1253,17 +1306,6 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	#region Physics Process
 
 	// TODO: Physics Process
-
-	#endregion
-
-	#region Utils
-
-	// TODO: Utils
-
-	private float ApplyExternalVolumeOffset(float volumeValue)
-	{
-		return (float)Math.MaxMagnitude(volumeValue + _externalVolumeDbOffset, _minimumVolumeDb);
-	}
 
 	#endregion
 
@@ -1294,6 +1336,70 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	#region Occlusion
 
 	// TODO: Occlusion
+
+	#endregion
+
+	#region Utils
+
+	// TODO: Utils
+
+	private float ApplyExternalVolumeOffset(float volumeValue)
+	{
+		return (float)Math.MaxMagnitude(volumeValue + _externalVolumeDbOffset, _minimumVolumeDb);
+	}
+
+	private double GetStreamLength()
+	{
+		double streamLength = 0.0;
+		if (Stream != null) streamLength = Stream.GetLength();
+		return streamLength;
+	}
+
+	private bool IsEditorSelected()
+	{
+		if (!Engine.IsEditorHint()) return false;
+
+		EditorSelection editorSelection = _editorInterface.GetSelection();
+		foreach (Node node in editorSelection.GetSelectedNodes())
+		{
+			if (node == this) return true;
+		}
+		return false;
+	}
+
+	private Node3D GetListener()
+	{
+		if (CustomListenerTarget != null) return CustomListenerTarget;
+#if TOOLS
+		if (Engine.IsEditorHint())
+		{
+			Viewport viewport = _editorInterface.GetEditorViewport3D();
+			if (viewport != null) return viewport.GetCamera3D();
+			return null;
+		}
+#endif
+		return GetViewport().GetCamera3D();
+	}
+
+	private void SetPlayInitiated()
+	{
+		_playInitiatedTime = Time.GetTicksMsec();
+		_playInitiatedDuration = (int)GetStreamLength() * 1000;
+	}
+
+	#endregion
+
+	#region Event Handlers
+
+	private void DeferredPlay(float fromPosition)
+	{
+		_pendingDelayTimer = null;
+		if (IsInsideTree())
+		{
+			base.Play(fromPosition);
+			EmitSignal(SignalName.SpatialAudioPlaybackStarted);
+		}
+	}
 
 	#endregion
 
