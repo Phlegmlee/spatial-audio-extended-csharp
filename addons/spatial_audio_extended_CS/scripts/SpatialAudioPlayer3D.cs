@@ -68,6 +68,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	#endregion
 
+	#region Signals
+
 	#region Signals - Zones
 
 	/// <summary>
@@ -225,6 +227,9 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	#endregion
 #endif
+	#endregion
+
+	#region Exports
 
 	#region Exports - Rays
 
@@ -232,7 +237,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	/// Options for how the omni-directional
 	/// room-sensing rays are distributed around the emitter.
 	/// </summary>
-	public enum EmitterRayDistribution
+	public enum RayDistributionEnum
 	{
 		/// <summary>
 		/// Ten (10) predefined rays (cardinal + diagonal + up/down).
@@ -247,13 +252,13 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		/// </summary>
 		ShapeScatter,
 	}
-	private EmitterRayDistribution _rayDistribution = EmitterRayDistribution.Classic;
+	private RayDistributionEnum _rayDistribution = RayDistributionEnum.Classic;
 	/// <summary>
 	/// How the room-sensing rays are arranged around the emitter.
-	/// <para>See <see cref="EmitterRayDistribution"/> for options.</para>
+	/// <para>See <see cref="RayDistributionEnum"/> for options.</para>
 	/// </summary>
 	[Export]
-	public EmitterRayDistribution RayDistribution
+	public RayDistributionEnum RayDistribution
 	{
 		get => _rayDistribution;
 		set
@@ -261,7 +266,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			_rayDistribution = value;
 #if TOOLS
 			NotifyPropertyListChanged();
-			// if (SetupComplete) RebuildRaycasts();
+			if (_setupComplete) RebuildRaycasts();
 #endif
 		}
 	}
@@ -269,7 +274,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	private int _fibonacciRayCount = 8;
 	/// <summary>
 	/// Number of omni-directional rays when using 
-	/// <see cref="EmitterRayDistribution.FibonacciSphere"/> distribution.
+	/// <see cref="RayDistributionEnum.FibonacciSphere"/> distribution.
 	/// More rays = better room-size estimation at higher CPU cost.
 	/// </summary>
 	[Export(PropertyHint.Range, "4, 128, 1")]
@@ -280,10 +285,10 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		{
 			_fibonacciRayCount = value;
 #if TOOLS
-			// if (SetupComplete && RayDistribution == EmitterRayDistribution.FibonacciSphere)
-			// {
-			// 	RebuildRaycasts();
-			// }
+			if (_setupComplete && RayDistribution == RayDistributionEnum.FibonacciSphere)
+			{
+				RebuildRaycasts();
+			}
 #endif
 		}
 	}
@@ -302,17 +307,17 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		{
 			_scatterShape = value;
 #if TOOLS
-			// if (SetupComplete && RayDistribution == EmitterRayDistribution.ShapeScatter)
-			// {
-			// 	RebuildRaycasts();
-			// }
+			if (_setupComplete && RayDistribution == RayDistributionEnum.ShapeScatter)
+			{
+				RebuildRaycasts();
+			}
 #endif
 		}
 	}
 
 	private int _shapeRayCount = 32;
 	/// <summary>
-	/// Number of rays when using <see cref="EmitterRayDistribution.ShapeScatter"/> random distribution.
+	/// Number of rays when using <see cref="RayDistributionEnum.ShapeScatter"/> random distribution.
 	/// </summary>
 	[Export(PropertyHint.Range, "1, 256, 1")]
 	public int ShapeRayCount
@@ -322,10 +327,10 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		{
 			_shapeRayCount = value;
 #if TOOLS
-			// if (SetupComplete && RayDistribution == EmitterRayDistribution.ShapeScatter)
-			// {
-			// 	RebuildRaycasts();
-			// }
+			if (_setupComplete && RayDistribution == RayDistributionEnum.ShapeScatter)
+			{
+				RebuildRaycasts();
+			}
 #endif
 		}
 	}
@@ -344,10 +349,10 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		{
 			_shapeScatterRandomness = value;
 #if TOOLS
-			// if (SetupComplete && RayDistribution == EmitterRayDistribution.ShapeScatter)
-			// {
-			// 	RebuildRaycasts();
-			// }
+			if (_setupComplete && RayDistribution == RayDistributionEnum.ShapeScatter)
+			{
+				RebuildRaycasts();
+			}
 #endif
 		}
 	}
@@ -366,7 +371,11 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	}
 
 	private float _maxRaycastDistance = 50.0f;
-
+	/// <summary>
+	/// The maximum distance raycasts will travel to sense geometry.
+	/// <para>Keep this value close to <see cref="AudioStreamPlayer3D.MaxDistance"/>
+	/// to avoid audible mismatches.</para>
+	/// </summary>
 	[Export(PropertyHint.Range, "0.01f, 4096.0f, 0.01f, suffix:m")]
 	public float MaxRaycastDistance
 	{
@@ -498,13 +507,13 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		set => _floorAngleThreshold = value;
 	}
 
-	private ulong _reverbCollisionMask = 1 << 0;
+	private uint _reverbCollisionMask = 1 << 0;
 	/// <summary>
 	/// Physics layers the room-sensing raycasts collide with.
 	/// Should match the layers your level geometry occupies.
 	/// </summary>
 	[Export(PropertyHint.Layers3DPhysics)]
-	public ulong ReverbCollisionMask
+	public uint ReverbCollisionMask
 	{
 		get => _reverbCollisionMask;
 		set => _reverbCollisionMask = value;
@@ -601,14 +610,14 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		set => _maxOcclusionVolumeReduction = value;
 	}
 
-	private ulong _occlusionCollisionMask = 1 << 0;
+	private uint _occlusionCollisionMask = 1 << 0;
 	/// <summary>
 	/// Physics layers the occlusion raycast collides with.
 	/// Can differ from reverb if e.g. thin walls should 
 	/// occlude but not affect perceived room size.
 	/// </summary>
 	[Export(PropertyHint.Layers3DPhysics)]
-	public ulong OcclusionCollisionMask
+	public uint OcclusionCollisionMask
 	{
 		get => _occlusionCollisionMask;
 		set => _occlusionCollisionMask = value;
@@ -685,7 +694,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	/// Options for the falloff curve used to calculate volume 
 	/// attenuation between the inner radius and the outer boundary.
 	/// </summary>
-	public enum AttenuationFunctionType
+	public enum AttenuationFunctionEnum
 	{
 		/// <summary>
 		/// Volume decreases at a constant rate with distance.
@@ -712,14 +721,14 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		/// </summary>
 		UserDefined,
 	}
-	private AttenuationFunctionType _attenuationFunction = AttenuationFunctionType.Linear;
+	private AttenuationFunctionEnum _attenuationFunction = AttenuationFunctionEnum.Linear;
 	/// <summary>
 	/// The curve that controls how quickly volume drops between the
-	/// inner radius and outer boundary. Select <see cref="AttenuationFunctionType.UserDefined"/>
+	/// inner radius and outer boundary. Select <see cref="AttenuationFunctionEnum.UserDefined"/>
 	/// to use a custom curve.
 	/// </summary>
 	[Export]
-	public AttenuationFunctionType AttenuationFunction
+	public AttenuationFunctionEnum AttenuationFunction
 	{
 		get => _attenuationFunction;
 		set
@@ -733,7 +742,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private Curve _userAttenuationCurve = null;
 	/// <summary>
-	/// Custom attenuation curve used when <see cref="AttenuationFunctionType.UserDefined"/>
+	/// Custom attenuation curve used when <see cref="AttenuationFunctionEnum.UserDefined"/>
 	/// is selected.
 	/// <para>X Axis: Normalized distance <c>0</c> = inner, <c>1</c> = outer.</para>
 	/// Y Axis: Volume <c>1</c> = full, <c>0</c> = silent.
@@ -743,6 +752,22 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	{
 		get => _userAttenuationCurve;
 		set => _userAttenuationCurve = value;
+	}
+
+	private float _innerRadiusPanningStrength = 1.0f;
+	/// <summary>
+	/// Panning strength multiplier applied when the listener is at the center 
+	/// of the inner radius. The value interpolates back to default <c>1.0</c>
+	/// at the inner radius edge.
+	/// <para><c>0.0</c> = fully centered (no panning / non-directional).</para>
+	/// <c>1.0</c> = default (no modification).
+	/// <para><c>2.0</c> = exaggerated panning (full left/right).</para>
+	/// </summary>
+	[Export(PropertyHint.Range, "0.0f, 2.0f, 0.01f")]
+	public float InnerRadiusPanningStrength
+	{
+		get => _innerRadiusPanningStrength;
+		set => _innerRadiusPanningStrength = value;
 	}
 
 	#endregion
@@ -1091,26 +1116,27 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	#endregion
 #endif
-
+	#endregion
+	
 	#region Internal State
 
-	private RayCast3D[] _raycasts = [];
-	private float[] _distances = [];
-	private string[] _rayNames = [];
+	private List<RayCast3D> _raycasts = [];
+	private List<float> _distances = [];
+	private List<string> _rayNames = [];
 
-	private Vector3[] _rayDirections = [];
+	private List<Vector3> _rayDirections = [];
 
-	private Array[] _reflectionPaths = [];
+	private List<List<Vector3>> _reflectionPaths = [];
 
-	private bool[] _reflectionEscaped = [];
+	private List<bool> _reflectionEscaped = [];
 
-	private float[] _rayAbsorptions = [];
+	private List<float> _rayAbsorptions = [];
 
-	private bool[] _rayTotalAbsorption = [];
+	private List<bool> _rayTotalAbsorption = [];
 
-	private float[] _rayTotalAbsorptionTransitionSpeeds = [];
+	private List<float> _rayTotalAbsorptionTransitionSpeeds = [];
 
-	private string[] _rayMaterialNames = [];
+	private List<string> _rayMaterialNames = [];
 
 	private RayCast3D _targetRaycast = null;
 
@@ -1177,6 +1203,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	private int _lastWallCount = 0;
 
 	private string[] _lastWallMaterials = [];
+
+	private float[] _lastWallAbsorptions = [];
 
 	private float _baseVolumeDb = 0.0f;
 
@@ -1327,7 +1355,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			AttenuationModel = AttenuationModelEnum.Disabled;
 		}
 
-		_busName = AudioBusPrefix + "#" + new Random().Next(1, 100).ToString();
+		_busName = AudioBusPrefix + "#" + new Random().Next(1, 1000).ToString();
 		AudioServer.AddBus();
 		_busIndex = AudioServer.BusCount - 1;
 		AudioServer.SetBusName(_busIndex, _busName);
@@ -1343,7 +1371,113 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void RebuildRaycasts()
 	{
-		// TODO
+		foreach (RayCast3D ray in _raycasts)
+		{
+			if (ray != null && ray.IsInsideTree())
+			{
+				RemoveChild(ray);
+				ray.QueueFree();
+			}
+		}
+
+		ClearRayMetadata();
+
+		// Generate rays based on RayDistribution
+		switch (RayDistribution)
+		{
+			case RayDistributionEnum.Classic:
+				foreach (string key in _classicRays.Keys)
+				{
+					RayCast3D ray = new()
+					{
+						Name = key,
+						TargetPosition = _classicRays[key][0] * MaxRaycastDistance,
+						RotationDegrees = _classicRays[key][1],
+						CollisionMask = ReverbCollisionMask,
+						DebugShapeThickness = 0,
+					};
+
+					// Compute world-space direction accounting for rotation.
+					Vector3 rotDeg = _classicRays[key][1];
+					Vector3 rotRad = DegToRad(rotDeg);
+
+					Basis basis = Basis.FromEuler(rotRad);
+					Vector3 dir = (basis * _classicRays[key][0]).Normalized();
+
+					AddRayMetadata(ray, key, dir);
+					AddChild(ray, false, InternalMode.Front);
+				}
+				break;
+
+			case RayDistributionEnum.FibonacciSphere:
+				Vector3[] fibDirs = GenerateFibonacciSphere(FibonacciRayCount);
+				for (int i = 0; i < fibDirs.Length; i++)
+				{
+					string rayName = $"Fib_{i}";
+					RayCast3D ray = new()
+					{
+						Name = $"Fib_{i}",
+						TargetPosition = fibDirs[i] * MaxRaycastDistance,
+						CollisionMask = ReverbCollisionMask,
+						DebugShapeThickness = 0,
+					};
+
+					AddRayMetadata(ray, rayName, fibDirs[i].Normalized());
+					AddChild(ray, false, InternalMode.Front);
+				}
+				break;
+
+			case RayDistributionEnum.ShapeScatter:
+				Vector3 shapeOrigin = GlobalPosition;
+				float radius = 0.5f;
+				if (ScatterShape != null && ScatterShape.IsInsideTree())
+				{
+					shapeOrigin = ScatterShape.GlobalPosition;
+					Vector3 scale = ScatterShape.Scale;
+					Vector3 absScale = new(Mathf.Abs(scale.X), Mathf.Abs(scale.Y), Mathf.Abs(scale.Z));
+					radius *= Mathf.Max(Mathf.Max(absScale.X, absScale.Y), absScale.Z);
+				}
+
+				for (int i = 0; i < ShapeRayCount; i++)
+				{
+					Vector3 spawnDir = RandomUnitVector();
+					Vector3 spawnOrigin = shapeOrigin + spawnDir * radius * new Random().NextSingle();
+
+					Vector3 centerToPoint = (spawnOrigin - shapeOrigin).Normalized();
+
+					Vector3 randDir = RandomUnitVector();
+
+					float blend = (float)Mathf.Clamp(ShapeScatterRandomness / 50.0, 0.0, 1.0);
+					Vector3 dir = (centerToPoint * (1.0f - blend) + randDir * blend).Normalized();
+
+					string rayName = $"Shape_{i}";
+					RayCast3D ray = new()
+					{
+						Name = rayName,
+						GlobalTransform = new Transform3D(new Basis(), spawnOrigin),
+						TargetPosition = dir * MaxRaycastDistance,
+						CollisionMask = ReverbCollisionMask,
+						DebugShapeThickness = 0,
+					};
+
+					AddRayMetadata(ray, rayName, dir);
+					AddChild(ray, false, InternalMode.Front);
+				}
+				break;
+		}
+
+		// Target-ray, always added last, for wall-occlusion.
+		RayCast3D targetRay = new()
+		{
+			Name = nameof(targetRay),
+			TargetPosition = Vector3.Back * MaxRaycastDistance,
+			CollisionMask = OcclusionCollisionMask,
+			DebugShapeThickness = 0
+		};
+
+		_targetRaycast = targetRay;
+		AddRayMetadata(targetRay, nameof(targetRay), Vector3.Forward);
+		AddChild(targetRay, false, InternalMode.Front);
 	}
 
 	#region Physics Process
@@ -1491,6 +1625,17 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		return new Vector3();
 	}
 
+	private Vector3 DegToRad(Vector3 rotation)
+	{
+		Vector3 result = new()
+		{
+			X = rotation.X * (MathF.PI / 180f),
+			Y = rotation.Y * (MathF.PI / 180f),
+			Z = rotation.Z * (MathF.PI / 180f),
+		};
+		return result;
+	}
+
 	private float ApplyExternalVolumeOffset(float volumeValue)
 	{
 		return (float)Math.MaxMagnitude(volumeValue + _externalVolumeDbOffset, _minimumVolumeDb);
@@ -1507,6 +1652,35 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		double streamLength = 0.0;
 		if (Stream != null) streamLength = Stream.GetLength();
 		return streamLength;
+	}
+
+	private void AddRayMetadata(RayCast3D raycast, string rayName, Vector3 direction)
+	{
+		_raycasts.Add(raycast);
+		_distances.Add(0.0f);
+		_rayNames.Add(rayName);
+		_rayDirections.Add(direction);
+		_reflectionPaths.Add([]);
+		_reflectionEscaped.Add(false);
+		_rayAbsorptions.Add(0.0f);
+		_rayTotalAbsorption.Add(false);
+		_rayTotalAbsorptionTransitionSpeeds.Add(_DefaultTotalAbsorptionTransitionSpeed);
+		_rayMaterialNames.Add("");
+	}
+
+	private void ClearRayMetadata()
+	{
+		_raycasts.Clear();
+		_distances.Clear();
+		_rayNames.Clear();
+		_rayDirections.Clear();
+		_reflectionPaths.Clear();
+		_reflectionEscaped.Clear();
+		_rayAbsorptions.Clear();
+		_rayTotalAbsorption.Clear();
+		_rayTotalAbsorptionTransitionSpeeds.Clear();
+		_rayMaterialNames.Clear();
+		_targetRaycast = null;
 	}
 
 	#endregion
@@ -1565,7 +1739,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		[
 			PropertyName.FibonacciRayCount, PropertyName.FibonacciRayReflections,
 		];
-		if (RayDistribution != EmitterRayDistribution.FibonacciSphere)
+		if (RayDistribution != RayDistributionEnum.FibonacciSphere)
 		{
 			foreach (StringName propName in fibonacciProperties)
 			{
@@ -1580,7 +1754,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		[
 			PropertyName.ScatterShape, PropertyName.ShapeRayCount, PropertyName.ShapeScatterRandomness,
 		];
-		if (RayDistribution != EmitterRayDistribution.ShapeScatter)
+		if (RayDistribution != RayDistributionEnum.ShapeScatter)
 		{
 			foreach (StringName propName in scatterProperties)
 			{
@@ -1650,7 +1824,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		List<StringName> attenuationProperties =
 		[
 			PropertyName.InnerRadius, PropertyName.FalloffDistance,
-			PropertyName.AttenuationFunction, PropertyName.UserAttenuationCurve,
+			PropertyName.AttenuationFunction, PropertyName.InnerRadiusPanningStrength,
+			PropertyName.UserAttenuationCurve,
 		];
 		if (!EnableVolumeAttenuation)
 		{
@@ -1680,7 +1855,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			}
 		}
 
-		if (AttenuationFunction != AttenuationFunctionType.UserDefined && (StringName)property["name"] == PropertyName.UserAttenuationCurve)
+		if (AttenuationFunction != AttenuationFunctionEnum.UserDefined && (StringName)property["name"] == PropertyName.UserAttenuationCurve)
 		{
 			property["usage"] = (int)~PropertyUsageFlags.Editor;
 		}

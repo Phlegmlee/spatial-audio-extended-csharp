@@ -4,6 +4,6 @@
 
 [node name="Main" type="Node3D" unique_id=910781270]
 
-[node name="SpatialAudioPlayer3D" type="AudioStreamPlayer3D" parent="." unique_id=2068444847]
+[node name="SpatialAudioPlayer3D" type="AudioStreamPlayer3D" parent="." unique_id=1799036784]
 script = ExtResource("1_d2j2t")
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
