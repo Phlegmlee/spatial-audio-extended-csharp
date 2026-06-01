@@ -1,10 +1,9 @@
 #if DEBUG
 using System.Collections.Generic;
 using Godot;
-using Godot.Collections;
 namespace SpatialAudioCS;
 
-[Tool]
+[Tool, Icon("uid://c0vs0tbtijiaf")]
 public partial class SpatialAudioDebug : Control
 {
 	#region Signals
@@ -125,6 +124,61 @@ public partial class SpatialAudioDebug : Control
 
 	#endregion
 
+	#region Internal
+
+	private SpatialAudioPlayer3D _parentAudioPlayer = null;
+
+	private ImmediateMesh _debugImmediate = null;
+	private MeshInstance3D _debugInstance = null;
+
+	private PanelContainer _debugPanel = null;
+	private bool _debugMinimized = false;
+	private Button _debugMinimizeButton = null;
+	private RichTextLabel _debugHeaderLabel = null;
+	private VBoxContainer _debugContentVbox = null;
+	private RichTextLabel _debugOverlayLabel = null;
+	private RichTextLabel _debugRaysLabel = null;
+	private ScrollContainer _debugRaysScroll = null;
+	private Button _debugRaysToggle = null;
+	private bool _raysExpanded = false;
+	private RichTextLabel _debugNavigationLabel = null;
+	private ScrollContainer _debugNavigationScroll = null;
+	private Button _debugNavigationToggle = null;
+	private bool _debugNavigationExpanded = false;
+	private Line2D _debugConnectorLine = null;
+	private float _debugOcclAbsWeight = 0.0f;
+
+	private Dictionary<int, bool> _debugRayReflectiosExpanded = [];
+	private bool _externalNavigationDebugActive = false;
+	private Dictionary<string, Variant> _externalNavigationDebug = [];
+
+	private CanvasLayer _debugSharedLayer = null;
+	private ScrollContainer _debugSharedScroll = null;
+	private VBoxContainer _debugSharedVbox = null;
+
+	internal void SetExternalNavigationDebugData(bool active, Dictionary<string, Variant> info)
+	{
+		_externalNavigationDebugActive = active;
+		if (active)
+		{
+			_externalNavigationDebug = new Dictionary<string, Variant>(info);
+		}
+		else
+		{
+			_externalNavigationDebug = [];
+		}
+		RefreshNavigationDebugVisibility();
+	}
+
+	internal void ClearExternalNavigationDebugData()
+	{
+		_externalNavigationDebugActive = false;
+		_externalNavigationDebug.Clear();
+		RefreshNavigationDebugVisibility();
+	}
+
+	#endregion
+
 	#region Runtime
 
 	/// <summary>
@@ -146,7 +200,24 @@ public partial class SpatialAudioDebug : Control
 	/// <param name="event"></param>
 	public override void _UnhandledInput(InputEvent @event)
 	{
+		if (!DisplayDebugInfo || Engine.IsEditorHint()) return;
 
+		if (_debugPanel == null || !_debugPanel.Visible) return;
+
+		if (@event is InputEventKey eventKey && @event.IsPressed() && !@event.IsEcho())
+		{
+			if (eventKey.Keycode == DebugToggleEffectsKey)
+			{
+				EffectsEnabled = !EffectsEnabled;
+				GetViewport().SetInputAsHandled();
+			}
+			else if (eventKey.Keycode == DebugToggleShapesKey)
+			{
+				DebugDrawRays = !DebugDrawRays;
+				DebugDrawRadius = !DebugDrawRadius;
+				GetViewport().SetInputAsHandled();
+			}
+		}
 	}
 
 	/// <summary>
@@ -154,7 +225,25 @@ public partial class SpatialAudioDebug : Control
 	/// </summary>
 	public override void _ExitTree()
 	{
+		_parentAudioPlayer.EnableDebugToggled -= OnEnableDebugToggled;
 
+		if (IsInstanceValid(_debugPanel))
+		{
+			_debugPanel.GetParent()?.RemoveChild(_debugPanel);
+
+			_debugPanel.QueueFree();
+		}
+
+		_debugPanel = null;
+
+		if (IsInstanceValid(_debugConnectorLine))
+		{
+			_debugConnectorLine.GetParent()?.RemoveChild(_debugConnectorLine);
+
+			_debugConnectorLine.QueueFree();
+		}
+
+		_debugConnectorLine = null;
 	}
 
 	#region Debug Overlay
@@ -163,7 +252,29 @@ public partial class SpatialAudioDebug : Control
 
 	private void SharedDebugContainer()
 	{
+		if (Engine.IsEditorHint())
+		{
+			if (_debugSharedScroll != null && IsInstanceValid(_debugSharedScroll)) return;
 
+			_debugSharedScroll = NewDefaultScroll();
+			_debugSharedVbox = NewDefaultVBox();
+			_debugSharedVbox.AddThemeConstantOverride("separation", 6);
+
+			_debugSharedScroll.AddChild(_debugSharedVbox);
+			GetViewport().AddChild(_debugSharedScroll);
+		}
+		else
+		{
+			if (_debugSharedLayer != null && IsInstanceValid(_debugSharedLayer)) return;
+
+			_debugSharedLayer = NewDefaultCanvas();
+			_debugSharedScroll = NewDefaultScroll();
+			_debugSharedVbox = NewDefaultVBox();
+
+			_debugSharedScroll.AddChild(_debugSharedVbox);
+			_debugSharedLayer.AddChild(_debugSharedScroll);
+			GetTree().Root.CallDeferred(Node.MethodName.AddChild, _debugSharedLayer);
+		}
 	}
 
 	private void SetupDebugOverlay()
@@ -221,6 +332,52 @@ public partial class SpatialAudioDebug : Control
 
 	#endregion
 
+	#region Utils
+
+	private ScrollContainer NewDefaultScroll(string name = "DebugScroll")
+	{
+		ScrollContainer result = new()
+		{
+			Name = name,
+			AnchorLeft = 0.0f,
+			AnchorTop = 0.0f,
+			AnchorRight = 0.0f,
+			AnchorBottom = 1.0f,
+			OffsetLeft = 8.0f,
+			OffsetTop = 8.0f,
+			OffsetRight = 460.0f,
+			OffsetBottom = -8.0f,
+			HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+
+		return result;
+	}
+
+	private VBoxContainer NewDefaultVBox(string name = "SourceList")
+	{
+		VBoxContainer result = new()
+		{
+			Name = name,
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+		};
+
+		return result;
+	}
+
+	private CanvasLayer NewDefaultCanvas(string name = "SpatialAudioDebugOverlay")
+	{
+		CanvasLayer result = new()
+		{
+			Name = name,
+			Layer = 100,
+		};
+
+		return result;
+	}
+
+	#endregion
+
 	#region Event Handlers
 
 	private void OnEnableDebugToggled(bool value)
@@ -261,13 +418,13 @@ public partial class SpatialAudioDebug : Control
 	/// </summary>
 	private void EditorReady()
 	{
-		SpatialAudioPlayer3D parent = GetParent() as SpatialAudioPlayer3D;
-		parent.EnableDebugToggled += OnEnableDebugToggled;
+		_parentAudioPlayer = GetParent() as SpatialAudioPlayer3D;
+		_parentAudioPlayer.EnableDebugToggled += OnEnableDebugToggled;
 
 		if (DebugDrawRays || DebugDrawRadius || DebugDrawPlayingState) SetupDebugMesh();
 	}
 
-	public override void _ValidateProperty(Dictionary property)
+	public override void _ValidateProperty(Godot.Collections.Dictionary property)
 	{
 		List<StringName> debugProperties =
 		[

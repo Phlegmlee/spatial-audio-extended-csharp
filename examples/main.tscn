@@ -13,7 +13,7 @@ UserAttenuationCurve = SubResource("Curve_d2j2t")
 EnableDebug = true
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
 
-[node name="DebugNode" type="Control" parent="SpatialAudioPlayer3D" unique_id=1274382324]
+[node name="AcousticDebugger" type="Control" parent="SpatialAudioPlayer3D" unique_id=1613710133]
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("2_aqi44")

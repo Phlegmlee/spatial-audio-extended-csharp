@@ -1126,36 +1126,6 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private float _activeTotalAbsorptionTransitionSpeed = _DefaultTotalAbsorptionTransitionSpeed;
 
-#if DEBUG
-	private ImmediateMesh _debugImmediate = null;
-	private MeshInstance3D _debugInstance = null;
-
-	private PanelContainer _debugPanel = null;
-	private bool _debugMinimized = false;
-	private Button _debugMinimizeButton = null;
-	private RichTextLabel _debugHeaderLabel = null;
-	private VBoxContainer _debugContentVbox = null;
-	private RichTextLabel _debugOverlayLabel = null;
-	private RichTextLabel _debugRaysLabel = null;
-	private ScrollContainer _debugRaysScroll = null;
-	private Button _debugRaysToggle = null;
-	private bool _raysExpanded = false;
-	private RichTextLabel _debugNavigationLabel = null;
-	private ScrollContainer _debugNavigationScroll = null;
-	private Button _debugNavigationToggle = null;
-	private bool _debugNavigationExpanded = false;
-	private Line2D _debugConnectorLine = null;
-	private float _debugOcclAbsWeight = 0.0f;
-
-	private Dictionary<int, bool> _debugRayReflectiosExpanded = [];
-	private bool _externalNavigationDebugActive = false;
-	private Dictionary<string, Variant> _externalNavigationDebug = [];
-
-	private CanvasLayer _debugSharedLayer = null;
-	private ScrollContainer _debugSharedScroll = null;
-	private VBoxContainer _debugSharedVbox = null;
-#endif
-
 #if TOOLS
 	private EditorInterface _editorInterface = null;
 #endif
@@ -1209,28 +1179,6 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		return Time.GetTicksMsec() < _externalOcclusionHoldUntilMsec;
 	}
 
-#if DEBUG
-	internal void SetExternalNavigationDebugData(bool active, Dictionary<string, Variant> info)
-	{
-		_externalNavigationDebugActive = active;
-		if (active)
-		{
-			_externalNavigationDebug = new Dictionary<string, Variant>(info);
-		}
-		else
-		{
-			_externalNavigationDebug = [];
-		}
-		//RefreshNavigationDebugVisibility();
-	}
-
-	internal void ClearExternalNavigationDebugData()
-	{
-		_externalNavigationDebugActive = false;
-		_externalNavigationDebug.Clear();
-		//RefreshNavigationDebugVisibility();
-	}
-#endif
 	#endregion
 
 	#region Gameplay Logic
@@ -1615,12 +1563,12 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	{
 		if (!value) return;
 
-		Control DebugNode = new SpatialAudioDebug()
+		Control AcousticDebugger = new SpatialAudioDebug()
 		{
-			Name = nameof(DebugNode)
+			Name = nameof(AcousticDebugger)
 		};
 
-		AddChildInEditor(this, DebugNode);
+		AddChildInEditor(this, AcousticDebugger);
 	}
 #endif
 	#endregion
@@ -1659,6 +1607,12 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	public override void _ExitTree()
 	{
 		EnableDebugToggled -= OnEnableDebugToggled;
+
+		if (!Engine.IsEditorHint())
+		{
+			int index = AudioServer.GetBusIndex(_busName);
+			if (index >= 0) AudioServer.RemoveBus(index);
+		}
 	}
 
 	/// <summary>
