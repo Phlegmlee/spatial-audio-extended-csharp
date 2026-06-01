@@ -1392,59 +1392,54 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	public override void _PhysicsProcess(double delta)
 	{
-		// TODO
+		// TODO: PhysicsProcess
 	}
 
 	#endregion
 
 	#region  Parameter Lerping
 
-	// TODO: Parameter Lerping
-
 	private void LerpParameters(float delta)
 	{
-
+		// TODO LerpParameters
 	}
 
 	private void SnapParameters(bool snapVolume = true)
 	{
-
+		// TODO SnapParameters
 	}
 
 	#endregion
 
 	#region  Spatial Audio Update
 
-	// TODO: Spatial Audio Update
-
 	private void OnSpatialAudioUpdate(Node3D listener)
 	{
-
+		// TODO: OnSpatialAudioUpdate
 	}
 
 	#endregion
 
 	#region Volume Attenuation
 
-	// TODO: Volume Attenuation
-
 	private void UpdateVolumeAttenuation(Node3D listener)
 	{
-
+		// TODO: UpdateVolumeAttenuation
 	}
 
 	private void UpdatePanningStrength(Node3D listener)
 	{
-
+		// TODO: UpdatePanningStrength
 	}
 
 	private void UpdateAirAbsorption(Node3D listener)
 	{
-
+		// TODO: UpdateAirAbsorption
 	}
 
 	private float ApplyAttenuationFunction(float alpha)
 	{
+		// TODO: ApplyAttenuationFunction
 		return 1.0f - alpha;
 	}
 
@@ -1452,27 +1447,23 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	#region Reverb
 
-	// TODO: Reverb
-
 	private void UpdateOmniDistance(RayCast3D ray, int index)
 	{
-
+		// TODO: UpdateOmniDistance
 	}
 
 	private void UpdateReverb()
 	{
-
+		// TODO: UpdateReverb
 	}
 
 	#endregion
 
 	#region Occlusion
-
-	// TODO: Occlusion
 	
 	private void UpdateLowpass(Node3D listener)
 	{
-		
+		// TODO: UpdateLowpass
 	}
 
 	#endregion
@@ -1569,14 +1560,14 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	{
 		List<Vector3> directions = [];
 
-		// TODO
+		// TODO: GenerateFibonacciSphere
 
 		return [.. directions];
 	}
 
 	private Vector3 RandomUnitVector()
 	{
-		// TODO
+		// TODO: RandomUnitVector
 		return new Vector3();
 	}
 
