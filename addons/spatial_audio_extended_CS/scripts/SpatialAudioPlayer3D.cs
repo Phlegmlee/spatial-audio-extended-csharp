@@ -213,17 +213,10 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	#region Signals - Debug
 
 	/// <summary>
-	/// Emitted when the debug overlay visibility is toggled.
+	/// Emitted when <see cref="EnableDebug"/> is toggled.
 	/// </summary>
-	/// <param name="visible"></param>
-	[Signal] public delegate void DebugOverlayToggledEventHandler(bool visible);
-
-	/// <summary>
-	/// Emits a compact diagnostics dictionary when the debug overlay is shown.
-	/// <para>Keys: <c>Distance</c>, <c>VolumeDbTarget</c>, <c>LowpassCutoff</c>, <c>ReverbRoomSize</c>, <c>WallCount</c></para>
-	/// </summary>
-	/// <param name="info">Keys: <c>Distance</c>, <c>VolumeDbTarget</c>, <c>LowpassCutoff</c>, <c>ReverbRoomSize</c>, <c>WallCount</c></param>
-	[Signal] public delegate void SpatialAudioDebugInfoEventHandler(Godot.Collections.Dictionary info);
+	/// <param name="value"></param>
+	[Signal] public delegate void EnableDebugToggledEventHandler(bool value);
 
 	#endregion
 #endif
@@ -1016,108 +1009,25 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	[ExportGroup("Debug")]
 
-	private bool _debugDrawRays = false;
+	private bool _enableDebug = false;
 	/// <summary>
-	/// Draws coloured lines for every raycast at runtime (in-game).
-	/// <para>Blue = omni room-sensing rays</para>
-	/// Green = target ray (clear line of sight)
-	/// <para>Red = target ray (occluded).</para>
-	/// <b>Note:</b> Rays are always shown in the editor when the node is selected.
+	/// Toggle to add a debug node child to the audio player.
 	/// </summary>
 	[Export]
-	public bool DebugDrawRays
+	public bool EnableDebug
 	{
-		get => _debugDrawRays;
-		set => _debugDrawRays = value;
-	}
-
-	private bool _debugDrawRadius = false;
-	/// <summary>
-	/// Draws wireframe spheres for the inner radius (cyan) and outer boundary
-	/// (orange) at runtime (in-game) when volume attenuation is enabled.
-	/// <para><b>Note:</b> Radius shapes are always shown in the editor when the node is selected.</para>
-	/// </summary>
-	[Export]
-	public bool DebugDrawRadius
-	{
-		get => _debugDrawRadius;
-		set => _debugDrawRadius = value;
-	}
-
-	private bool _debugDrawPlayingState = false;
-	/// <summary>
-	/// Draws a small wireframe sphere at the emitter origin that indicates
-	/// playback state:
-	/// <para>green = playing</para>
-	/// red = stopped
-	/// <para><b>Note:</b> Always shown in the editor when the node is selected.</para>
-	/// </summary>
-	[Export]
-	public bool DebugDrawPlayingState
-	{
-		get => _debugDrawPlayingState;
-		set => _debugDrawPlayingState = value;
-	}
-
-	private bool _displayDebugInfo = false;
-	/// <summary>
-	/// Displays key spatial-audio diagnostics as an on-screen overlay every
-	/// update cycle while within the radius of the source.
-	/// <para>Keys: <c>Distance</c>, <c>VolumeDbTarget</c>, <c>LowpassCutoff</c>, <c>ReverbRoomSize</c>, <c>WallCount</c></para>
-	/// </summary>
-	[Export]
-	public bool DisplayDebugInfo
-	{
-		get => _displayDebugInfo;
+		get => _enableDebug;
 		set
 		{
-			_displayDebugInfo = value;
-#if TOOLS
-			NotifyPropertyListChanged();
-#endif
-		}
-	}
-
-	private Key _debugToggleEffectsKey = Key.F1;
-	/// <summary>
-	/// While the debug overlay is visible, press this key to toggle all
-	/// spatial-audio effects on/off so you can A/B compare the difference.
-	/// </summary>
-	[Export]
-	public Key DebugToggleEffectsKey
-	{
-		get => _debugToggleEffectsKey;
-		set => _debugToggleEffectsKey = value;
-	}
-
-	private Key _debugToggleShapesKey = Key.F2;
-	/// <summary>
-	/// While the debug overlay is visible, press this key to toggle debug
-	/// shape drawing (rays, spheres) on/off at runtime.
-	/// </summary>
-	[Export]
-	public Key DebugToggleShapesKey
-	{
-		get => _debugToggleShapesKey;
-		set => _debugToggleShapesKey = value;
-	}
-
-	private bool _effectsEnabledValue = true;
-	[Export]
-	public bool EffectsEnabledValue
-	{
-		get => _effectsEnabledValue;
-		set
-		{
-			_effectsEnabledValue = value;
-			GlobalEffectsDisabled = !value;
+			_enableDebug = value;
+			EmitSignal(SignalName.EnableDebugToggled, value);
 		}
 	}
 
 	#endregion
 #endif
 	#endregion
-	
+
 	#region Internal State
 
 	private List<RayCast3D> _raycasts = [];
@@ -1249,8 +1159,6 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 #if TOOLS
 	private EditorInterface _editorInterface = null;
 #endif
-
-	internal bool GlobalEffectsDisabled { get; set; } = false;
 
 	#endregion
 
@@ -1573,18 +1481,6 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	#region Utils
 
-	private bool IsEditorSelected()
-	{
-		if (!Engine.IsEditorHint()) return false;
-
-		EditorSelection editorSelection = _editorInterface.GetSelection();
-		foreach (Node node in editorSelection.GetSelectedNodes())
-		{
-			if (node == this) return true;
-		}
-		return false;
-	}
-
 	private Node3D GetListener()
 	{
 		if (CustomListenerTarget != null) return CustomListenerTarget;
@@ -1608,21 +1504,6 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			currentNode = currentNode.GetParent();
 		}
 		return null;
-	}
-
-	private Vector3[] GenerateFibonacciSphere(int count)
-	{
-		List<Vector3> directions = [];
-
-		// TODO
-
-		return [.. directions];
-	}
-
-	private Vector3 RandomUnitVector()
-	{
-		// TODO
-		return new Vector3();
 	}
 
 	private Vector3 DegToRad(Vector3 rotation)
@@ -1654,6 +1535,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		return streamLength;
 	}
 
+#if TOOLS
 	private void AddRayMetadata(RayCast3D raycast, string rayName, Vector3 direction)
 	{
 		_raycasts.Add(raycast);
@@ -1683,6 +1565,46 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		_targetRaycast = null;
 	}
 
+	private Vector3[] GenerateFibonacciSphere(int count)
+	{
+		List<Vector3> directions = [];
+
+		// TODO
+
+		return [.. directions];
+	}
+
+	private Vector3 RandomUnitVector()
+	{
+		// TODO
+		return new Vector3();
+	}
+
+	private bool IsEditorSelected()
+	{
+		if (!Engine.IsEditorHint()) return false;
+
+		EditorSelection editorSelection = _editorInterface.GetSelection();
+		foreach (Node node in editorSelection.GetSelectedNodes())
+		{
+			if (node == this) return true;
+		}
+		return false;
+	}
+
+	private void AddChildInEditor(Node parent, Node node)
+	{
+		parent.AddChild(node, true);
+		if (this.Owner == null)
+		{
+			node.Owner = this;
+		}
+		else
+		{
+			node.Owner = this.Owner;
+		}
+	}
+#endif
 	#endregion
 
 	#region Event Handlers
@@ -1697,10 +1619,28 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		}
 	}
 
+#if DEBUG
+	private void OnEnableDebugToggled(bool value)
+	{
+		if (!value) return;
+
+		Control DebugNode = new SpatialAudioDebug()
+		{
+			Name = nameof(DebugNode)
+		};
+
+		AddChildInEditor(this, DebugNode);
+	}
+#endif
 	#endregion
 
 #if TOOLS
 	#region Editor Config
+
+	public override void _EnterTree()
+	{
+		EnableDebugToggled += OnEnableDebugToggled;
+	}
 
 	/// <summary>
 	/// This is <see cref="_Ready"/> but for the editor only.
@@ -1711,11 +1651,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 		RebuildRaycasts();
 
-		EffectsEnabledValue = !GlobalEffectsDisabled;
-		
 		_editorInterface = EditorInterface.Singleton;
-
-		if (DebugDrawRays || DebugDrawRadius || DebugDrawPlayingState) SetupDebugMesh();
 
 		_setupComplete = true;
 
@@ -1727,6 +1663,11 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		_lastReverbWetness = _targetReverbWetness;
 		_lastReverbDamping = _targetReverbDamping;
 		_lastAirAbsorptionCutoff = _targetAirAbsorptionCutoff;
+	}
+
+	public override void _ExitTree()
+	{
+		EnableDebugToggled -= OnEnableDebugToggled;
 	}
 
 	/// <summary>
@@ -1869,122 +1810,6 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		{
 			property["usage"] = (int)~PropertyUsageFlags.Editor;
 		}
-
-		List<StringName> debugProperties =
-		[
-			PropertyName.DebugToggleEffectsKey, PropertyName.DebugToggleShapesKey,
-		];
-		if (!EnableAirAbsorption)
-		{
-			foreach (StringName propName in debugProperties)
-			{
-				if ((StringName)property["name"] == propName)
-				{
-					property["usage"] = (int)~PropertyUsageFlags.Editor;
-				}
-			}
-		}
-	}
-
-	#endregion
-#endif
-
-#if DEBUG
-	#region Debug Overlay
-
-	private void SharedDebugContainer()
-	{
-
-	}
-
-	private void SetupDebugOverlay()
-	{
-
-	}
-
-	private void OnDebugMinimizeToggled()
-	{
-
-	}
-
-	private void OnRaysTogglePressed()
-	{
-
-	}
-
-	private void OnNavigationTogglePressed()
-	{
-
-	}
-
-	private void RefreshNavigationDebugVisibility()
-	{
-
-	}
-
-	private string FormatNavigationDebugText()
-	{
-		return "";
-	}
-
-	private void OnRayMetaClicked(Variant meta)
-	{
-
-	}
-	
-	private void PrintDebug(Node3D listener)
-	{
-		
-	}
-
-	/// <summary>
-	/// Look for unhandled input for the debug pannel interactions.
-	/// </summary>
-	/// <param name="event"></param>
-	public override void _UnhandledInput(InputEvent @event)
-	{
-
-	}
-
-	/// <summary>
-	/// Remove per-instance debug nodes from the shared container.
-	/// </summary>
-	public override void _ExitTree()
-	{
-
-	}
-
-	// TODO: Debug Overlay
-
-	#endregion
-
-	#region Debug Drawing
-
-	// TODO: Debug Drawing
-
-	private void UpdateDebugConnectorLine()
-	{
-		
-	}
-
-	private void SetupDebugMesh()
-	{
-
-	}
-
-	private void DrawDebugShapes(bool editorSelected = false)
-	{
-
-	}
-
-	private void DrawDebugRays()
-	{
-
-	}
-	
-	private void DrawWireframeSphere(Vector3 center, float radius, Color color, int segments = 64)
-	{
-		
 	}
 
 	#endregion

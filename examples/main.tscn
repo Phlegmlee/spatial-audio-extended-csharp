@@ -1,9 +1,19 @@
 [gd_scene format=3 uid="uid://dvon5jj5cxuvp"]
 
 [ext_resource type="Script" uid="uid://dda61d0ai53jd" path="res://addons/spatial_audio_extended_CS/scripts/SpatialAudioPlayer3D.cs" id="1_d2j2t"]
+[ext_resource type="Script" uid="uid://ckl5ow8qws0hb" path="res://addons/spatial_audio_extended_CS/scripts/SpatialAudioDebug.cs" id="2_aqi44"]
+
+[sub_resource type="Curve" id="Curve_d2j2t"]
 
 [node name="Main" type="Node3D" unique_id=910781270]
 
-[node name="SpatialAudioPlayer3D" type="AudioStreamPlayer3D" parent="." unique_id=1799036784]
+[node name="SpatialAudioPlayer3D" type="AudioStreamPlayer3D" parent="." unique_id=2003195715]
 script = ExtResource("1_d2j2t")
+UserAttenuationCurve = SubResource("Curve_d2j2t")
+EnableDebug = true
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
+
+[node name="DebugNode" type="Control" parent="SpatialAudioPlayer3D" unique_id=1274382324]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("2_aqi44")
