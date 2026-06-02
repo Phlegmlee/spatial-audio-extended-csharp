@@ -4,7 +4,7 @@ using Godot;
 namespace SpatialAudioCS;
 
 [Tool, Icon("uid://c0vs0tbtijiaf")]
-public partial class SpatialAudioDebug : Control
+public partial class SpatialAudioDebug : Node3D
 {
 	#region Signals
 
@@ -282,7 +282,7 @@ public partial class SpatialAudioDebug : Control
 		_debugPanel = new()
 		{
 			Name = $"DebugPanel_{_parentAudioPlayer.Name}",
-			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 		};
 
 		StyleBoxFlat panel = new()
@@ -325,11 +325,11 @@ public partial class SpatialAudioDebug : Control
 		{
 			Name = nameof(_debugRaysScroll),
 			CustomMinimumSize = new Vector2(420, 0),
-			SizeFlagsVertical = SizeFlags.ShrinkBegin,
+			SizeFlagsVertical = Control.SizeFlags.ShrinkBegin,
 			Visible = false
 		};
 
-		_debugRaysLabel = NewRtLabel(nameof(_debugRaysLabel), new Vector2(420, 0), MouseFilterEnum.Pass);
+		_debugRaysLabel = NewRtLabel(nameof(_debugRaysLabel), new Vector2(420, 0), Control.MouseFilterEnum.Pass);
 		_debugRaysLabel.MetaClicked += OnRayMetaClicked;
 
 		_debugRaysScroll.AddChild(_debugRaysLabel);
@@ -343,7 +343,7 @@ public partial class SpatialAudioDebug : Control
 		{
 			Name = nameof(_debugNavigationScroll),
 			CustomMinimumSize = new Vector2(420, 0),
-			SizeFlagsVertical = SizeFlags.ShrinkBegin,
+			SizeFlagsVertical = Control.SizeFlags.ShrinkBegin,
 			Visible = false
 		};
 
@@ -434,27 +434,228 @@ public partial class SpatialAudioDebug : Control
 
 	private void UpdateDebugConnectorLine()
 	{
+		if (_debugConnectorLine == null || _debugPanel == null) return;
 
+		if (!_debugPanel.Visible)
+		{
+			_debugConnectorLine.Visible = false;
+			return;
+		}
+
+		if (Engine.IsEditorHint())
+		{
+			_debugConnectorLine.Visible = false;
+			return;
+		}
+
+		Camera3D camera = GetViewport().GetCamera3D();
+		if (camera == null || camera.IsPositionBehind(_parentAudioPlayer.GlobalPosition))
+		{
+			_debugConnectorLine.Visible = false;
+			return;
+		}
+
+		Vector2 screenPos = camera.UnprojectPosition(_parentAudioPlayer.GlobalPosition);
+		Rect2 panelRect = _debugPanel.GetGlobalRect();
+		Vector2 panelAnchor = new
+		(
+			panelRect.Position.X + panelRect.Size.X,
+			panelRect.Position.Y + panelRect.Size.Y * 0.5f
+		);
+
+		_debugConnectorLine.ClearPoints();
+		_debugConnectorLine.AddPoint(panelAnchor);
+		_debugConnectorLine.AddPoint(screenPos);
+		_debugConnectorLine.Visible = true;
 	}
 
 	internal void SetupDebugMesh()
 	{
+		_debugImmediate = new();
 
+		StandardMaterial3D mat = new()
+		{
+			ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			VertexColorUseAsAlbedo = true,
+			Transparency = BaseMaterial3D.TransparencyEnum.Alpha
+		};
+
+		_debugInstance = new()
+		{
+			Name = "DebugMesh",
+			Mesh = _debugImmediate,
+			MaterialOverride = mat,
+		};
+
+		AddChild(_debugInstance);
 	}
 
 	private void DrawDebugShapes(bool editorSelected = false)
 	{
+		if (_debugImmediate == null) SetupDebugMesh();
 
+		_debugImmediate.ClearSurfaces();
+		_debugImmediate.SurfaceBegin(Mesh.PrimitiveType.Lines);
+
+		if (_debugDrawRays || editorSelected) DrawDebugRays();
+
+		bool showRadius = editorSelected || (DebugDrawRadius && EffectsEnabled);
+		if (showRadius && _parentAudioPlayer.EnableVolumeAttenuation)
+		{
+			if (_parentAudioPlayer.InnerRadius > 0.0f)
+				DrawWireframeSphere(Vector3.Zero, _parentAudioPlayer.InnerRadius, Colors.LightBlue);
+
+			float outer = _parentAudioPlayer.InnerRadius + _parentAudioPlayer.FalloffDistance;
+			DrawWireframeSphere(Vector3.Zero, outer, Colors.Orange);
+		}
+
+		if (DebugDrawPlayingState || editorSelected)
+		{
+			Color stateColor;
+			if (_parentAudioPlayer.pendingDelayTimer != null) stateColor = Colors.Yellow;
+			else if (_parentAudioPlayer.Playing) stateColor = Colors.Green;
+			else stateColor = Colors.Red;
+
+			Node3D listener = _parentAudioPlayer.GetListener();
+			float indicatorRadius = 0.15f;
+			if (listener != null)
+			{
+				float dist = _parentAudioPlayer.GlobalPosition.DistanceTo(listener.GlobalPosition);
+				indicatorRadius = Mathf.Max(0.15f, dist * 0.02f);
+			}
+			DrawWireframeSphere(Vector3.Zero, indicatorRadius, stateColor, 16);
+		}
+		_debugImmediate.SurfaceEnd();
 	}
 
 	private void DrawDebugRays()
 	{
+		List<RayCast3D> raycasts = _parentAudioPlayer.raycasts;
+		List<List<Vector3>> reflectionPaths = _parentAudioPlayer.reflectionPaths;
+		List<bool> reflectionEscaped = _parentAudioPlayer.reflectionEscaped;
+		RayCast3D targetRaycast = _parentAudioPlayer.targetRaycast;
+		float MaxRaycastDistance = _parentAudioPlayer.MaxRaycastDistance;
 
+		for (int i = 0; i < raycasts.Count; i++)
+		{
+			RayCast3D ray = raycasts[i];
+			if (ray == null || ray == _parentAudioPlayer.targetRaycast) continue;
+
+
+			if (i < reflectionPaths.Count && reflectionPaths[i].Count >= 2)
+			{
+				List<Vector3> path = reflectionPaths[i];
+				bool escaped = i < reflectionEscaped.Count && reflectionEscaped[i];
+				for (int seg = 0; seg < path.Count; i++)
+				{
+					Vector3 start = ToLocal(path[seg]);
+					Vector3 end = ToLocal(path[seg + 1]);
+					Color color;
+					if (escaped && seg == path.Count - 2) color = Colors.Red;
+					else if (seg == 0) color = Colors.Blue;
+					else color = Colors.Purple;
+
+					_debugImmediate.SurfaceSetColor(color);
+					_debugImmediate.SurfaceAddVertex(start);
+					_debugImmediate.SurfaceSetColor(color);
+					_debugImmediate.SurfaceAddVertex(end);
+				}
+			}
+			else
+			{
+				Vector3 worldDir = (ray.GlobalBasis * ray.TargetPosition).Normalized();
+				float drawLength;
+				List<float> distances = _parentAudioPlayer.distances;
+				if (i < distances.Count && distances[i] > 0.0f) drawLength = Mathf.Min(distances[i], MaxRaycastDistance);
+				else drawLength = MaxRaycastDistance;
+
+				Vector3 start = ToLocal(ray.GlobalPosition);
+				Vector3 end = ToLocal(ray.GlobalPosition + worldDir * drawLength);
+				bool escaped = i < reflectionEscaped.Count && reflectionEscaped[i];
+				Color color;
+				if (escaped) color = Colors.Red; else color = Colors.Blue;
+
+				_debugImmediate.SurfaceSetColor(color);
+				_debugImmediate.SurfaceAddVertex(start);
+				_debugImmediate.SurfaceSetColor(color);
+				_debugImmediate.SurfaceAddVertex(end);
+			}
+		}
+
+		Node3D listener = _parentAudioPlayer.GetListener();
+		if (targetRaycast != null && listener != null)
+		{
+			Vector3 toListener = listener.GlobalPosition - _parentAudioPlayer.GlobalPosition;
+			float distToListener = toListener.Length();
+			float tMax;
+			if (_parentAudioPlayer.EnableVolumeAttenuation) 
+				tMax = _parentAudioPlayer.InnerRadius + _parentAudioPlayer.FalloffDistance;
+			else tMax = MaxRaycastDistance;
+
+			float tLen = Mathf.Min(distToListener, tMax);
+			Vector3 tDir;
+			if (distToListener > 0.0f) tDir = toListener.Normalized(); else tDir = Vector3.Forward;
+			Vector3 tStart = ToLocal(_parentAudioPlayer.GlobalPosition);
+			Vector3 tEnd = ToLocal(_parentAudioPlayer.GlobalPosition + tDir * tLen);
+			
+			Color tc = Colors.Green;
+			if (targetRaycast.IsColliding())
+			{
+				float dToWall = _parentAudioPlayer.GlobalPosition.DistanceTo(targetRaycast.GetCollisionPoint());
+				if (dToWall < tLen)
+				{
+					tc = Colors.Red;
+					tEnd = ToLocal(_parentAudioPlayer.GlobalPosition + tDir * dToWall);
+				}
+			}
+			_debugImmediate.SurfaceSetColor(tc);
+			_debugImmediate.SurfaceAddVertex(tStart);
+			_debugImmediate.SurfaceSetColor(tc);
+			_debugImmediate.SurfaceAddVertex(tEnd);
+		}
 	}
 
 	private void DrawWireframeSphere(Vector3 center, float radius, Color color, int segments = 64)
 	{
+		for (int plane = 0; plane < 3; plane++)
+		{
+			for (int i = 0; i < segments; i++)
+			{
+				float a0 = i / segments * Mathf.Tau;
+				float a1 = (i + 1) / segments * Mathf.Tau;
+				Vector3 p0;
+				Vector3 p1;
+				switch (plane)
+				{
+					// XZ (Horizontal)
+					case 0:
+						p0 = center + new Vector3(Mathf.Cos(a0) * radius, 0.0f, Mathf.Sin(a0) * radius);
+						p1 = center + new Vector3(Mathf.Cos(a1) * radius, 0.0f, Mathf.Sin(a1) * radius);
+						break;
 
+					// XY (Front)
+					case 1:
+						p0 = center + new Vector3(Mathf.Cos(a0) * radius, Mathf.Sin(a0) * radius, 0.0f);
+						p1 = center + new Vector3(Mathf.Cos(a1) * radius, Mathf.Sin(a1) * radius, 0.0f);
+						break;
+
+					// YZ (Side)
+					case 2:
+						p0 = center + new Vector3(0.0f, Mathf.Cos(a0) * radius, Mathf.Sin(a0) * radius);
+						p1 = center + new Vector3(0.0f, Mathf.Cos(a1) * radius, Mathf.Sin(a1) * radius);
+						break;
+
+					default:
+						p0 = new();
+						p1 = new();
+						break;
+				}
+				_debugImmediate.SurfaceSetColor(color);
+				_debugImmediate.SurfaceAddVertex(p0);
+				_debugImmediate.SurfaceSetColor(color);
+				_debugImmediate.SurfaceAddVertex(p1);
+			}
+		}
 	}
 
 	#endregion
@@ -477,7 +678,7 @@ public partial class SpatialAudioDebug : Control
 			OffsetRight = 460.0f,
 			OffsetBottom = -8.0f,
 			HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
-			MouseFilter = MouseFilterEnum.Ignore,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
 		};
 
 		return result;
@@ -488,7 +689,7 @@ public partial class SpatialAudioDebug : Control
 		VBoxContainer result = new()
 		{
 			Name = name,
-			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 		};
 
 		return result;
@@ -498,7 +699,7 @@ public partial class SpatialAudioDebug : Control
 	(
 		string name = "Label",
 		Vector2 customSize = new(),
-		MouseFilterEnum mouseFilter = MouseFilterEnum.Ignore
+		Control.MouseFilterEnum mouseFilter = Control.MouseFilterEnum.Ignore
 	)
 	{
 		RichTextLabel result = new()
@@ -509,7 +710,7 @@ public partial class SpatialAudioDebug : Control
 			CustomMinimumSize = customSize,
 			ScrollActive = false,
 			MouseFilter = mouseFilter,
-			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 		};
 		result.AddThemeFontSizeOverride("normal_font_size", 13);
 		result.AddThemeFontSizeOverride("bold_font_size", 14);

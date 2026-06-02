@@ -48,13 +48,13 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 		SetPlayInitiated();
 
-		if (_pendingDelayTimer != null && _pendingDelayTimer.TimeLeft > 0.0)
+		if (pendingDelayTimer != null && pendingDelayTimer.TimeLeft > 0.0)
 		{
-			_pendingDelayTimer.Timeout -= () => DeferredPlay(fromPosition);
+			pendingDelayTimer.Timeout -= () => DeferredPlay(fromPosition);
 		}
 
-		_pendingDelayTimer = GetTree().CreateTimer(delay);
-		_pendingDelayTimer.Timeout += () => DeferredPlay(fromPosition);
+		pendingDelayTimer = GetTree().CreateTimer(delay);
+		pendingDelayTimer.Timeout += () => DeferredPlay(fromPosition);
 	}
 
 	/// <summary>
@@ -1030,15 +1030,15 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	#region Internal State
 
-	private List<RayCast3D> _raycasts = [];
-	private List<float> _distances = [];
+	internal List<RayCast3D> raycasts = [];
+	internal List<float> distances = [];
 	private List<string> _rayNames = [];
 
 	private List<Vector3> _rayDirections = [];
 
-	private List<List<Vector3>> _reflectionPaths = [];
+	internal List<List<Vector3>> reflectionPaths = [];
 
-	private List<bool> _reflectionEscaped = [];
+	internal List<bool> reflectionEscaped = [];
 
 	private List<float> _rayAbsorptions = [];
 
@@ -1048,7 +1048,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private List<string> _rayMaterialNames = [];
 
-	private RayCast3D _targetRaycast = null;
+	internal RayCast3D targetRaycast = null;
 
 	private const float _TotalAbsorptionReverbWetnessCap = 0.05f;
 	private const float _TotalAbsorptionReverbDampingFloor = 0.90f;
@@ -1104,7 +1104,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private float _targetAirAbsorptionCutoff = 20000.0f;
 
-	private SceneTreeTimer _pendingDelayTimer = null;
+	internal SceneTreeTimer pendingDelayTimer = null;
 
 	private ulong _playInitiatedTime = 1;
 
@@ -1227,7 +1227,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void RebuildRaycasts()
 	{
-		foreach (RayCast3D ray in _raycasts)
+		foreach (RayCast3D ray in raycasts)
 		{
 			if (ray != null && ray.IsInsideTree())
 			{
@@ -1331,7 +1331,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			DebugShapeThickness = 0
 		};
 
-		_targetRaycast = targetRay;
+		targetRaycast = targetRay;
 		AddRayMetadata(targetRay, nameof(targetRay), Vector3.Forward);
 		AddChild(targetRay, false, InternalMode.Front);
 	}
@@ -1420,7 +1420,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	#region Utils
 
-	private Node3D GetListener()
+	internal Node3D GetListener()
 	{
 		if (CustomListenerTarget != null) return CustomListenerTarget;
 #if TOOLS
@@ -1477,12 +1477,12 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 #if TOOLS
 	private void AddRayMetadata(RayCast3D raycast, string rayName, Vector3 direction)
 	{
-		_raycasts.Add(raycast);
-		_distances.Add(0.0f);
+		raycasts.Add(raycast);
+		distances.Add(0.0f);
 		_rayNames.Add(rayName);
 		_rayDirections.Add(direction);
-		_reflectionPaths.Add([]);
-		_reflectionEscaped.Add(false);
+		reflectionPaths.Add([]);
+		reflectionEscaped.Add(false);
 		_rayAbsorptions.Add(0.0f);
 		_rayTotalAbsorption.Add(false);
 		_rayTotalAbsorptionTransitionSpeeds.Add(_DefaultTotalAbsorptionTransitionSpeed);
@@ -1491,17 +1491,17 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void ClearRayMetadata()
 	{
-		_raycasts.Clear();
-		_distances.Clear();
+		raycasts.Clear();
+		distances.Clear();
 		_rayNames.Clear();
 		_rayDirections.Clear();
-		_reflectionPaths.Clear();
-		_reflectionEscaped.Clear();
+		reflectionPaths.Clear();
+		reflectionEscaped.Clear();
 		_rayAbsorptions.Clear();
 		_rayTotalAbsorption.Clear();
 		_rayTotalAbsorptionTransitionSpeeds.Clear();
 		_rayMaterialNames.Clear();
-		_targetRaycast = null;
+		targetRaycast = null;
 	}
 
 	private Vector3[] GenerateFibonacciSphere(int count)
@@ -1550,7 +1550,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void DeferredPlay(float fromPosition)
 	{
-		_pendingDelayTimer = null;
+		pendingDelayTimer = null;
 		if (IsInsideTree())
 		{
 			base.Play(fromPosition);
@@ -1563,7 +1563,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	{
 		if (!value) return;
 
-		Control AcousticDebugger = new SpatialAudioDebug()
+		Node3D AcousticDebugger = new SpatialAudioDebug()
 		{
 			Name = nameof(AcousticDebugger)
 		};
