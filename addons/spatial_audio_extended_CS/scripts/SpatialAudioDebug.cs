@@ -19,7 +19,7 @@ public partial class SpatialAudioDebug : Control
 	/// <para>Keys: <c>Distance</c>, <c>VolumeDbTarget</c>, <c>LowpassCutoff</c>, <c>ReverbRoomSize</c>, <c>WallCount</c></para>
 	/// </summary>
 	/// <param name="info">Keys: <c>Distance</c>, <c>VolumeDbTarget</c>, <c>LowpassCutoff</c>, <c>ReverbRoomSize</c>, <c>WallCount</c></param>
-	[Signal] public delegate void SpatialAudioDebugInfoEventHandler(Godot.Collections.Dictionary info);
+	[Signal] public delegate void SpatialAudioDebugInfoEventHandler(Godot.Collections.Dictionary<string, Variant> info);
 
 	#endregion
 
@@ -140,7 +140,7 @@ public partial class SpatialAudioDebug : Control
 	private RichTextLabel _debugRaysLabel = null;
 	private ScrollContainer _debugRaysScroll = null;
 	private Button _debugRaysToggle = null;
-	private bool _raysExpanded = false;
+	private bool _debugRaysExpanded = false;
 	private RichTextLabel _debugNavigationLabel = null;
 	private ScrollContainer _debugNavigationScroll = null;
 	private Button _debugNavigationToggle = null;
@@ -248,8 +248,6 @@ public partial class SpatialAudioDebug : Control
 
 	#region Debug Overlay
 
-	// TODO: Debug Overlay
-
 	private void SharedDebugContainer()
 	{
 		if (Engine.IsEditorHint())
@@ -279,22 +277,153 @@ public partial class SpatialAudioDebug : Control
 
 	private void SetupDebugOverlay()
 	{
+		SharedDebugContainer();
 
+		_debugPanel = new()
+		{
+			Name = $"DebugPanel_{_parentAudioPlayer.Name}",
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+		};
+
+		StyleBoxFlat panel = new()
+		{
+			BgColor = new Color(0.0f, 0.0f, 0.0f, 0.65f),
+			CornerRadiusTopLeft = 6,
+			CornerRadiusTopRight = 6,
+			CornerRadiusBottomLeft = 6,
+			CornerRadiusBottomRight = 6,
+			ContentMarginLeft = 10.0f,
+			ContentMarginRight = 10.0f,
+			ContentMarginTop = 6.0f,
+			ContentMarginBottom = 6.0f,
+		};
+
+		_debugPanel.AddThemeStyleboxOverride(nameof(panel), panel);
+
+		VBoxContainer outerVbox = new() { Name = nameof(outerVbox) };
+
+		HBoxContainer header = new() { Name = nameof(header) };
+
+		_debugMinimizeButton = NewButton("▼", nameof(_debugMinimizeButton), new Vector2(20, 20));
+		_debugMinimizeButton.Pressed += OnDebugMinimizeToggled;
+		header.AddChild(_debugMinimizeButton);
+
+		_debugHeaderLabel = NewRtLabel(nameof(_debugHeaderLabel));
+		header.AddChild(_debugHeaderLabel);
+
+		outerVbox.AddChild(header);
+
+		_debugContentVbox = new() { Name = nameof(_debugContentVbox) };
+
+		_debugOverlayLabel = NewRtLabel(nameof(_debugOverlayLabel), new Vector2(420, 0));
+
+		_debugRaysToggle = NewButton("▶ Rays", nameof(_debugRaysToggle), alignment: HorizontalAlignment.Left);
+		_debugRaysToggle.Pressed += OnRaysTogglePressed;
+		_debugContentVbox.AddChild(_debugRaysToggle);
+
+		_debugRaysScroll = new()
+		{
+			Name = nameof(_debugRaysScroll),
+			CustomMinimumSize = new Vector2(420, 0),
+			SizeFlagsVertical = SizeFlags.ShrinkBegin,
+			Visible = false
+		};
+
+		_debugRaysLabel = NewRtLabel(nameof(_debugRaysLabel), new Vector2(420, 0), MouseFilterEnum.Pass);
+		_debugRaysLabel.MetaClicked += OnRayMetaClicked;
+
+		_debugRaysScroll.AddChild(_debugRaysLabel);
+		_debugContentVbox.AddChild(_debugRaysScroll);
+
+		_debugNavigationToggle = NewButton("▶ Navigation", nameof(_debugNavigationToggle), alignment: HorizontalAlignment.Left, visible: false);
+		_debugNavigationToggle.Pressed += OnNavigationTogglePressed;
+		_debugContentVbox.AddChild(_debugNavigationToggle);
+
+		_debugNavigationScroll = new()
+		{
+			Name = nameof(_debugNavigationScroll),
+			CustomMinimumSize = new Vector2(420, 0),
+			SizeFlagsVertical = SizeFlags.ShrinkBegin,
+			Visible = false
+		};
+
+		_debugNavigationLabel = NewRtLabel(nameof(_debugNavigationLabel), new Vector2(420, 0));
+
+		_debugNavigationScroll.AddChild(_debugNavigationLabel);
+		_debugContentVbox.AddChild(_debugNavigationScroll);
+
+		outerVbox.AddChild(_debugContentVbox);
+		_debugPanel.AddChild(outerVbox);
+		_debugSharedVbox.AddChild(_debugPanel);
+
+		_debugConnectorLine = new()
+		{
+			Name = $"Connector_{_parentAudioPlayer.Name}",
+			Width = 1.5f,
+			DefaultColor = Colors.White,
+			ZIndex = -1,
+		};
+
+		if (Engine.IsEditorHint()) GetViewport().AddChild(_debugConnectorLine);
+
+		_debugSharedLayer.AddChild(_debugConnectorLine);
+
+		RefreshNavigationDebugVisibility();
 	}
 
 	private void RefreshNavigationDebugVisibility()
 	{
+		if (_debugNavigationToggle == null || _debugNavigationScroll == null) return;
 
+		bool visible = _externalNavigationDebugActive;
+		_debugNavigationToggle.Visible = visible;
+		_debugNavigationScroll.Visible = visible && _debugNavigationExpanded;
+		if (_debugNavigationToggle.Visible && _debugNavigationExpanded)
+		{
+			_debugNavigationToggle.Text = "▼ Navigation";
+		}
+		else
+		{
+			_debugNavigationToggle.Text = "▶ Navigation";
+		}
 	}
 
 	private string FormatNavigationDebugText()
 	{
+		if (!_externalNavigationDebugActive) return "";
+
+		Dictionary<string, Variant> d = _externalNavigationDebug;
+
+		d.TryGetValue("profile", out Variant profile);
+		d.TryGetValue("agent_name", out Variant nodeName);
+		d.TryGetValue("path_points", out Variant pathPoints);
+		d.TryGetValue("graph_points", out Variant graphPoints);
+		d.TryGetValue("graph_edges", out Variant graphEdges);
+
 		return "";
 	}
 
 	private void PrintDebug(Node3D listener)
 	{
+		if (!IsInstanceValid(_debugPanel)) SetupDebugOverlay();
 
+		_debugPanel.Visible = true;
+
+		Godot.Collections.Dictionary<string, Variant> info = new()
+		{
+			// {"Distance", listener.GlobalPosition.DistanceTo(_parentAudioPlayer.GlobalPosition)},
+			// {"VolumeDbTarget", _parentAudioPlayer._targetVolumeDb},
+			// {"LowpassCutoff", _parentAudioPlayer._targetLowpassCutoff},
+			// {"ReverbRoomSize", _parentAudioPlayer._targetReverbRoomSize},
+			// {"ReverbWetness", _parentAudioPlayer._targetReverbWetness},
+			// {"ReverbDamping", _parentAudioPlayer._targetReverbDamping},
+			// {"WallCount", _parentAudioPlayer._lastWallCount},
+			// {"NavigationProxyActive", _externalNavigationDebugActive},
+		};
+
+		EmitSignal(SignalName.SpatialAudioDebugInfo, info);
+
+		// TODO: Finish this
 	}
 
 	#endregion
@@ -365,6 +494,54 @@ public partial class SpatialAudioDebug : Control
 		return result;
 	}
 
+	private RichTextLabel NewRtLabel
+	(
+		string name = "Label",
+		Vector2 customSize = new(),
+		MouseFilterEnum mouseFilter = MouseFilterEnum.Ignore
+	)
+	{
+		RichTextLabel result = new()
+		{
+			Name = name,
+			BbcodeEnabled = true,
+			FitContent = true,
+			CustomMinimumSize = customSize,
+			ScrollActive = false,
+			MouseFilter = mouseFilter,
+			SizeFlagsHorizontal = SizeFlags.ExpandFill,
+		};
+		result.AddThemeFontSizeOverride("normal_font_size", 13);
+		result.AddThemeFontSizeOverride("bold_font_size", 14);
+		result.AddThemeColorOverride("default_color", Colors.White);
+
+		return result;
+	}
+
+	private Button NewButton
+	(
+		string text,
+		string name = "Button",
+		Vector2 customMinSize = new(),
+		HorizontalAlignment alignment = HorizontalAlignment.Center, bool visible = true
+	)
+	{
+		Button result = new()
+		{
+			Name = name,
+			Text = text,
+			CustomMinimumSize = customMinSize,
+			Alignment = alignment,
+			Flat = true,
+			Visible = visible
+		};
+		result.AddThemeColorOverride("front_color", Colors.LightGray);
+		result.AddThemeColorOverride("front_hover_color", Colors.White);
+		result.AddThemeFontSizeOverride("font_size", 13);
+
+		return result;
+	}
+
 	private CanvasLayer NewDefaultCanvas(string name = "SpatialAudioDebugOverlay")
 	{
 		CanvasLayer result = new()
@@ -391,22 +568,43 @@ public partial class SpatialAudioDebug : Control
 
 	private void OnDebugMinimizeToggled()
 	{
-
+		_debugMinimized = !_debugMinimized;
+		if (_debugContentVbox != null)
+		{
+			_debugContentVbox.Visible = !_debugMinimized;
+			EmitSignal(SignalName.DebugOverlayToggled, _debugContentVbox.Visible);
+		}
+		if (_debugMinimizeButton != null && _debugMinimized)
+		{
+			_debugMinimizeButton.Text = "▶";
+		}
+		else
+		{
+			_debugMinimizeButton.Text = "▼";
+		}
 	}
 
 	private void OnRaysTogglePressed()
 	{
-
+		_debugRaysExpanded = !_debugRaysExpanded;
+		_debugRaysScroll.Visible = _debugRaysExpanded;
 	}
 
 	private void OnNavigationTogglePressed()
 	{
-
+		_debugNavigationExpanded = !_debugNavigationExpanded;
+		RefreshNavigationDebugVisibility();
 	}
 
 	private void OnRayMetaClicked(Variant meta)
 	{
-
+		string key = meta.ToString();
+		if (key.StartsWith("ray_"))
+		{
+			int index = key.Substr(0, 4).ToInt();
+			_debugRayReflectiosExpanded ??= [];
+			_debugRayReflectiosExpanded[index] = !_debugRayReflectiosExpanded[index];
+		}
 	}
 
 	#endregion
