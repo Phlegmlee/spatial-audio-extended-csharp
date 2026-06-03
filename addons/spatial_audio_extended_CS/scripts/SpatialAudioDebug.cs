@@ -1,4 +1,5 @@
 #if DEBUG
+using System;
 using System.Collections.Generic;
 using Godot;
 namespace SpatialAudioCS;
@@ -470,7 +471,7 @@ public partial class SpatialAudioDebug : Node3D
 		float distanceToListener = listener.GlobalPosition.DistanceTo(_parentAudioPlayer.GlobalPosition);
 
 		double fps = Engine.GetFramesPerSecond();
-		double frameTimeMs = 1000.0 / Mathf.Max(fps, 1.0);
+		double frameTimeMs = 1000.0 / Math.Max(fps, 1.0);
 		string headerText = $"SpatialAudio  {_parentAudioPlayer.Name}";
 		headerText += $"FPS: {fps}  {frameTimeMs} ms";
 		if (_debugHeaderLabel != null) _debugHeaderLabel.Text = headerText;
@@ -521,7 +522,7 @@ public partial class SpatialAudioDebug : Node3D
 
 		if (_parentAudioPlayer.EnableAirAbsorption)
 		{
-			float combined = Mathf.Min(_parentAudioPlayer.targetLowpassCutoff, _parentAudioPlayer.targetAirAbsorptionCutoff);
+			float combined = Math.Min(_parentAudioPlayer.targetLowpassCutoff, _parentAudioPlayer.targetAirAbsorptionCutoff);
 			text += $"Air Absorption    {_parentAudioPlayer.targetAirAbsorptionCutoff} Hz → {combined} Hz " +
 			$"({_parentAudioPlayer.AirAbsorptionMinDistance}-{_parentAudioPlayer.AirAbsorptionMaxDistance} m) \n";
 		}
@@ -643,7 +644,7 @@ public partial class SpatialAudioDebug : Node3D
 			if (listener != null)
 			{
 				float dist = _parentAudioPlayer.GlobalPosition.DistanceTo(listener.GlobalPosition);
-				indicatorRadius = Mathf.Max(0.15f, dist * 0.02f);
+				indicatorRadius = Math.Max(0.15f, dist * 0.02f);
 			}
 			DrawWireframeSphere(Vector3.Zero, indicatorRadius, stateColor, 16);
 		}
@@ -688,7 +689,7 @@ public partial class SpatialAudioDebug : Node3D
 				Vector3 worldDir = (ray.GlobalBasis * ray.TargetPosition).Normalized();
 				float drawLength;
 				List<float> distances = _parentAudioPlayer.distances;
-				if (i < distances.Count && distances[i] > 0.0f) drawLength = Mathf.Min(distances[i], MaxRaycastDistance);
+				if (i < distances.Count && distances[i] > 0.0f) drawLength = Math.Min(distances[i], MaxRaycastDistance);
 				else drawLength = MaxRaycastDistance;
 
 				Vector3 start = ToLocal(ray.GlobalPosition);
@@ -714,7 +715,7 @@ public partial class SpatialAudioDebug : Node3D
 				tMax = _parentAudioPlayer.InnerRadius + _parentAudioPlayer.FalloffDistance;
 			else tMax = MaxRaycastDistance;
 
-			float tLen = Mathf.Min(distToListener, tMax);
+			float tLen = Math.Min(distToListener, tMax);
 			Vector3 tDir;
 			if (distToListener > 0.0f) tDir = toListener.Normalized(); else tDir = Vector3.Forward;
 			Vector3 tStart = ToLocal(_parentAudioPlayer.GlobalPosition);
@@ -743,28 +744,28 @@ public partial class SpatialAudioDebug : Node3D
 		{
 			for (int i = 0; i < segments; i++)
 			{
-				float a0 = i / segments * Mathf.Tau;
-				float a1 = (i + 1) / segments * Mathf.Tau;
+				float a0 = i / segments * MathF.Tau;
+				float a1 = (i + 1) / segments * MathF.Tau;
 				Vector3 p0;
 				Vector3 p1;
 				switch (plane)
 				{
 					// XZ (Horizontal)
 					case 0:
-						p0 = center + new Vector3(Mathf.Cos(a0) * radius, 0.0f, Mathf.Sin(a0) * radius);
-						p1 = center + new Vector3(Mathf.Cos(a1) * radius, 0.0f, Mathf.Sin(a1) * radius);
+						p0 = center + new Vector3(MathF.Cos(a0) * radius, 0.0f, MathF.Sin(a0) * radius);
+						p1 = center + new Vector3(MathF.Cos(a1) * radius, 0.0f, MathF.Sin(a1) * radius);
 						break;
 
 					// XY (Front)
 					case 1:
-						p0 = center + new Vector3(Mathf.Cos(a0) * radius, Mathf.Sin(a0) * radius, 0.0f);
-						p1 = center + new Vector3(Mathf.Cos(a1) * radius, Mathf.Sin(a1) * radius, 0.0f);
+						p0 = center + new Vector3(MathF.Cos(a0) * radius, MathF.Sin(a0) * radius, 0.0f);
+						p1 = center + new Vector3(MathF.Cos(a1) * radius, MathF.Sin(a1) * radius, 0.0f);
 						break;
 
 					// YZ (Side)
 					case 2:
-						p0 = center + new Vector3(0.0f, Mathf.Cos(a0) * radius, Mathf.Sin(a0) * radius);
-						p1 = center + new Vector3(0.0f, Mathf.Cos(a1) * radius, Mathf.Sin(a1) * radius);
+						p0 = center + new Vector3(0.0f, MathF.Cos(a0) * radius, MathF.Sin(a0) * radius);
+						p1 = center + new Vector3(0.0f, MathF.Cos(a1) * radius, MathF.Sin(a1) * radius);
 						break;
 
 					default:
