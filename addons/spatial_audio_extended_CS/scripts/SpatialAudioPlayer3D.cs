@@ -1088,21 +1088,21 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private string _busName = "";
 	private int _busIndex = 1;
-	private AudioEffectReverb _reverbEffect = null;
-	private AudioEffectLowPassFilter _lowpassFilter = null;
+	internal AudioEffectReverb reverbEffect = null;
+	internal AudioEffectLowPassFilter lowpassFilter = null;
 
-	private float _targetLowpassCutoff = 20000.0f;
-	private float _targetReverbRoomSize = 0.0f;
-	private float _targetReverbWetness = 0.0f;
-	private float _targetReverbDamping = 0.0f;
-	private float _targetVolumeDb = 0.0f;
+	internal float targetLowpassCutoff = 20000.0f;
+	internal float targetReverbRoomSize = 0.0f;
+	internal float targetReverbWetness = 0.0f;
+	internal float targetReverbDamping = 0.0f;
+	internal float targetVolumeDb = 0.0f;
 
 	private float _openness = 0.0f;
 
 	private float _basePanningStrength = 1.0f;
-	private float _targetPanningStrength = 1.0f;
+	internal float targetPanningStrength = 1.0f;
 
-	private float _targetAirAbsorptionCutoff = 20000.0f;
+	internal float targetAirAbsorptionCutoff = 20000.0f;
 
 	internal SceneTreeTimer pendingDelayTimer = null;
 
@@ -1110,11 +1110,11 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private int _playInitiatedDuration = 0;
 
-	private int _lastWallCount = 0;
+	internal int lastWallCount = 0;
 
-	private string[] _lastWallMaterials = [];
+	internal string[] lastWallMaterials = [];
 
-	private float[] _lastWallAbsorptions = [];
+	internal float[] lastWallAbsorptions = [];
 
 	private float _baseVolumeDb = 0.0f;
 
@@ -1196,9 +1196,9 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		}
 
 		_baseVolumeDb = VolumeDb;
-		_targetVolumeDb = VolumeDb;
+		targetVolumeDb = VolumeDb;
 		_basePanningStrength = PanningStrength;
-		_targetPanningStrength = PanningStrength;
+		targetPanningStrength = PanningStrength;
 
 		if (Autoplay && AutoplayFadeIn)
 		{
@@ -1219,10 +1219,10 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		this.Bus = _busName;
 
 		AudioServer.AddBusEffect(_busIndex, new AudioEffectReverb(), 0);
-		_reverbEffect = AudioServer.GetBusEffect(_busIndex, 0) as AudioEffectReverb;
+		reverbEffect = AudioServer.GetBusEffect(_busIndex, 0) as AudioEffectReverb;
 
 		AudioServer.AddBusEffect(_busIndex, new AudioEffectLowPassFilter(), 1);
-		_lowpassFilter = AudioServer.GetBusEffect(_busIndex, 1) as AudioEffectLowPassFilter;
+		lowpassFilter = AudioServer.GetBusEffect(_busIndex, 1) as AudioEffectLowPassFilter;
 	}
 
 	private void RebuildRaycasts()
@@ -1598,10 +1598,10 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		_wasInsideInner = false;
 		_wasInFalloff = false;
 		_wasAudible = false;
-		_lastReverbRoomSize = _targetReverbRoomSize;
-		_lastReverbWetness = _targetReverbWetness;
-		_lastReverbDamping = _targetReverbDamping;
-		_lastAirAbsorptionCutoff = _targetAirAbsorptionCutoff;
+		_lastReverbRoomSize = targetReverbRoomSize;
+		_lastReverbWetness = targetReverbWetness;
+		_lastReverbDamping = targetReverbDamping;
+		_lastAirAbsorptionCutoff = targetAirAbsorptionCutoff;
 	}
 
 	public override void _ExitTree()

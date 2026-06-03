@@ -399,8 +399,35 @@ public partial class SpatialAudioDebug : Node3D
 		d.TryGetValue("path_points", out Variant pathPoints);
 		d.TryGetValue("graph_points", out Variant graphPoints);
 		d.TryGetValue("graph_edges", out Variant graphEdges);
+		d.TryGetValue("path_length", out Variant pathLength);
+		d.TryGetValue("direct_distance", out Variant directDistance);
+		d.TryGetValue("detour_ratio", out Variant detourRatio);
+		d.TryGetValue("proxy_to_listener", out Variant proxyToListener);
+		d.TryGetValue("proxy_to_origin", out Variant proxyToOrigin);
+		d.TryGetValue("proxy_to_target", out Variant proxyToTarget);
+		d.TryGetValue("proxy_backoff_active", out Variant proxyBackoffActive);
+		d.TryGetValue("spring_arm_active", out Variant springArmActive);
+		d.TryGetValue("spring_arm_distance_from_end", out Variant springArmDistance);
+		d.TryGetValue("proxy_waypoint_index", out Variant proxyWaypointIndex);
+		d.TryGetValue("update_hz", out Variant updateHz);
 
-		return "";
+		string txt = $"";
+		txt += $"Agent               {nodeName} \n";
+		txt += $"Profile             {profile}\n";
+		txt += $"Path                {pathPoints} pts  len: {pathLength} m  direct: {directDistance} m  ratio: {detourRatio} \n";
+		txt += $"Graph               {graphPoints} pts  {graphEdges} edges\n";
+		txt += $"Proxy               waypoint: {proxyWaypointIndex}  to listener: {proxyToListener} m  to origin: {proxyToOrigin} m \n";
+		string backoff, spring = "";
+		if ((bool)proxyBackoffActive) backoff = "ON"; else backoff = "OFF";
+		if ((bool)springArmActive)
+		{
+			spring = "ON";
+			txt += $"Spring Dist         {springArmDistance} m from path end \n";
+		} else spring = "OFF";
+		txt += $"Proxy Target        delta: {proxyToTarget} m  backoff: {backoff}  spring: {spring} \n";
+		txt += $"Solve Rate          {updateHz} Hz \n";
+
+		return txt;
 	}
 
 	private void PrintDebug(Node3D listener)
@@ -411,26 +438,109 @@ public partial class SpatialAudioDebug : Node3D
 
 		Godot.Collections.Dictionary<string, Variant> info = new()
 		{
-			// {"Distance", listener.GlobalPosition.DistanceTo(_parentAudioPlayer.GlobalPosition)},
-			// {"VolumeDbTarget", _parentAudioPlayer._targetVolumeDb},
-			// {"LowpassCutoff", _parentAudioPlayer._targetLowpassCutoff},
-			// {"ReverbRoomSize", _parentAudioPlayer._targetReverbRoomSize},
-			// {"ReverbWetness", _parentAudioPlayer._targetReverbWetness},
-			// {"ReverbDamping", _parentAudioPlayer._targetReverbDamping},
-			// {"WallCount", _parentAudioPlayer._lastWallCount},
-			// {"NavigationProxyActive", _externalNavigationDebugActive},
+			{"Distance", listener.GlobalPosition.DistanceTo(_parentAudioPlayer.GlobalPosition)},
+			{"VolumeDbTarget", _parentAudioPlayer.targetVolumeDb},
+			{"LowpassCutoff", _parentAudioPlayer.targetLowpassCutoff},
+			{"ReverbRoomSize", _parentAudioPlayer.targetReverbRoomSize},
+			{"ReverbWetness", _parentAudioPlayer.targetReverbWetness},
+			{"ReverbDamping", _parentAudioPlayer.targetReverbDamping},
+			{"WallCount", _parentAudioPlayer.lastWallCount},
+			{"NavigationProxyActive", _externalNavigationDebugActive},
 		};
 
 		EmitSignal(SignalName.SpatialAudioDebugInfo, info);
 
-		// TODO: Finish this
+		float effectiveMaxDist;
+		if (_parentAudioPlayer.MaxDistance > 0.0f)
+			effectiveMaxDist = _parentAudioPlayer.MaxDistance;
+		else effectiveMaxDist = _parentAudioPlayer.MaxRaycastDistance;
+
+		float distanceToListener = listener.GlobalPosition.DistanceTo(_parentAudioPlayer.GlobalPosition);
+
+		double fps = Engine.GetFramesPerSecond();
+		double frameTimeMs = 1000.0 / Mathf.Max(fps, 1.0);
+		string headerText = $"SpatialAudio  {_parentAudioPlayer.Name}";
+		headerText += $"FPS: {fps}  {frameTimeMs} ms";
+		if (_debugHeaderLabel != null) _debugHeaderLabel.Text = headerText;
+
+		if (_debugMinimized) return;
+
+		bool isOccluded = _parentAudioPlayer.lastWallCount > 0;
+
+		float curLpHz, curRbWet, curRbRoom, curRbDamp;
+		if (_parentAudioPlayer.lowpassFilter != null)
+			curLpHz = _parentAudioPlayer.lowpassFilter.CutoffHz;
+		else curLpHz = -1.0f;
+
+		AudioEffectReverb reverb = _parentAudioPlayer.reverbEffect;
+		if (_parentAudioPlayer.reverbEffect != null)
+		{
+			curRbWet = reverb.Wet;
+			curRbRoom = reverb.RoomSize;
+			curRbDamp = reverb.Damping;
+		}
+		else
+		{
+			curRbWet = -1.0f;
+			curRbRoom = -1.0f;
+			curRbDamp = -1.0f;
+		}
+
+		string text = "\n";
+		text += $"Listener Dist    {distanceToListener} m  (max: {effectiveMaxDist} m) \n";
+
+		if (_parentAudioPlayer.EnableVolumeAttenuation)
+		{
+			float inner = _parentAudioPlayer.InnerRadius;
+			float outer = inner + _parentAudioPlayer.FalloffDistance;
+			string zone;
+			if (distanceToListener <= inner) zone = "INNER";
+			else if (distanceToListener < outer) zone = "FALLOFF";
+			else zone = "OUTSIDE";
+
+			text += $"Attenuation      {inner} m / {outer} m   zone: {zone} \n";
+			text += $"Atten. Func      {_parentAudioPlayer.AttenuationFunction} \n";
+			if (!Mathf.IsEqualApprox(_parentAudioPlayer.InnerRadiusPanningStrength, 1.0))
+			{
+				text += $"Panning        {_parentAudioPlayer.PanningStrength} → " +
+				$"{_parentAudioPlayer.targetPanningStrength} (inner: x{_parentAudioPlayer.InnerRadiusPanningStrength}) \n";
+			}
+		}
+
+		if (_parentAudioPlayer.EnableAirAbsorption)
+		{
+			float combined = Mathf.Min(_parentAudioPlayer.targetLowpassCutoff, _parentAudioPlayer.targetAirAbsorptionCutoff);
+			text += $"Air Absorption    {_parentAudioPlayer.targetAirAbsorptionCutoff} Hz → {combined} Hz " +
+			$"({_parentAudioPlayer.AirAbsorptionMinDistance}-{_parentAudioPlayer.AirAbsorptionMaxDistance} m) \n";
+		}
+
+		if (isOccluded)
+		{
+			string wallsStr = ", ";
+			if (_parentAudioPlayer.lastWallMaterials.Length > 0) wallsStr += _parentAudioPlayer.lastWallMaterials;
+			else wallsStr = "";
+
+			text += $"Occluded        YES, by {_parentAudioPlayer.lastWallCount} wall(s) \n";
+			if (wallsStr != "") text += $"Materials     {wallsStr} \n";
+		}
+		else text += $"Occluded        NO \n";
+
+		text += $"Lowpass Cutoff  {curLpHz} Hz  → {_parentAudioPlayer.targetLowpassCutoff} Hz \n";
+		text += $"Reverb Wet  {curRbWet} Hz  → {_parentAudioPlayer.targetReverbWetness} Hz " +
+		$"(max: {_parentAudioPlayer.MaxReverbWetness}) \n";
+		text += $"Reverb Room  {curRbRoom} Hz  → {_parentAudioPlayer.targetReverbRoomSize} Hz \n";
+		text += $"Reverb Damp  {curRbDamp} Hz  → {_parentAudioPlayer.targetReverbDamping} Hz \n";
+
+		//text += $"";
+		// TODO: .............ugh
+
+		_debugOverlayLabel.Text = text;
+		RefreshNavigationDebugVisibility();
 	}
 
 	#endregion
 
 	#region Debug Drawing
-
-	// TODO: Debug Drawing
 
 	private void UpdateDebugConnectorLine()
 	{
