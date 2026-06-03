@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="AcousticMaterial" format=3 uid="uid://bor2lh5f3lkf5"]
+
+[ext_resource type="Script" uid="uid://dqnwrmxu1rh6b" path="res://addons/spatial_audio_extended_CS/scripts/AcousticMaterial.cs" id="1_dxver"]
+
+[resource]
+script = ExtResource("1_dxver")
+metadata/_custom_type_script = "uid://dqnwrmxu1rh6b"

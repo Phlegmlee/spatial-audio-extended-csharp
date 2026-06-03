@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="AcousticMaterial" format=3 uid="uid://cq5t86k7adjr2"]
+
+[ext_resource type="Script" uid="uid://dqnwrmxu1rh6b" path="res://addons/spatial_audio_extended_CS/scripts/AcousticMaterial.cs" id="1_h2q4s"]
+
+[resource]
+script = ExtResource("1_h2q4s")
+AbsorptionLow = 0.11
+AbsorptionMid = 0.07
+AbsorptionHigh = 0.06
+TransmissionLow = 0.07
+TransmissionMid = 0.014
+TransmissionHigh = 0.005
+metadata/_custom_type_script = "uid://dqnwrmxu1rh6b"
