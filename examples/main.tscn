@@ -15,3 +15,6 @@ metadata/_custom_type_script = "uid://dda61d0ai53jd"
 
 [node name="AcousticDebugger" type="Node3D" parent="SpatialAudioPlayer3D" unique_id=779905485]
 script = ExtResource("2_aqi44")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=1426298409]
+use_collision = true

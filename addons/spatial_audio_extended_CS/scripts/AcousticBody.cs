@@ -76,6 +76,11 @@ public partial class AcousticBody : Node
 		return null;
 	}
 
+	internal static bool IsAcousticBodyOnNode(Node node)
+	{
+		return FindAcousticBodyOnNode(node) != null;
+	}
+
 	#endregion
 
 #if TOOLS

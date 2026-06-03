@@ -5,11 +5,14 @@ namespace SpatialAudioCS;
 [Tool]
 public partial class Plugin : EditorPlugin
 {
-	//private Button AddAcousticButton = null;
+	private Button AddAcousticButton = null;
+
+	EditorInterface editorInterface = null;
 
 	public override void _EnterTree()
 	{
-		// TODO: Editor Interface selection changed signal connection
+		editorInterface = EditorInterface.Singleton;
+		editorInterface.GetSelection().SelectionChanged += OnSelectionChanged;
 	}
 
 	public override void _ExitTree()
@@ -18,11 +21,32 @@ public partial class Plugin : EditorPlugin
 		// TODO: Disconnect from selection signal.
 	}
 
-	// TODO: private void OnSelectionChanged()
+	private void OnSelectionChanged()
+	{
+		Godot.Collections.Array<Node> selections = editorInterface.GetSelection().GetSelectedNodes();
+		
+		if (selections.Count == 1 && selections[0] is CollisionObject3D || selections[0] is CsgShape3D)
+		{
+			Node3D selected = selections[0] as Node3D;
+			bool alreadyHas = AcousticBody.IsAcousticBodyOnNode(selected);
+			if (!alreadyHas)
+			{
+				AddButton(selected);
+				return;
+			}
+			RemoveButton();
+		}
+	}
 
-	// TODO: private void ShowButton(Node3D target)
+	private void AddButton(Node3D target)
+	{
+		
+	}
 
-	// TODO: private void RemoveButton()
+	private void RemoveButton()
+	{
+		
+	}
 
 	// TODO: private void OnAddAcousticButtonPressed(Node3D target)
 }
