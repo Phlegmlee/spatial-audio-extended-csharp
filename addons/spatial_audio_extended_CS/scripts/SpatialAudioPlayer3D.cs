@@ -1290,8 +1290,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 				{
 					shapeOrigin = ScatterShape.GlobalPosition;
 					Vector3 scale = ScatterShape.Scale;
-					Vector3 absScale = new(Mathf.Abs(scale.X), Mathf.Abs(scale.Y), Mathf.Abs(scale.Z));
-					radius *= Mathf.Max(Mathf.Max(absScale.X, absScale.Y), absScale.Z);
+					Vector3 absScale = new(Math.Abs(scale.X), Math.Abs(scale.Y), Math.Abs(scale.Z));
+					radius *= Math.Max(Math.Max(absScale.X, absScale.Y), absScale.Z);
 				}
 
 				for (int i = 0; i < ShapeRayCount; i++)
@@ -1303,7 +1303,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 					Vector3 randDir = RandomUnitVector();
 
-					float blend = (float)Mathf.Clamp(ShapeScatterRandomness / 50.0, 0.0, 1.0);
+					float blend = (float)Math.Clamp(ShapeScatterRandomness / 50.0, 0.0, 1.0);
 					Vector3 dir = (centerToPoint * (1.0f - blend) + randDir * blend).Normalized();
 
 					string rayName = $"Shape_{i}";
@@ -1533,15 +1533,32 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	{
 		List<Vector3> directions = [];
 
-		// TODO: GenerateFibonacciSphere
+		float goldenRatio = (1.0f + MathF.Sqrt(5.0f)) / 2.0f;
+
+		for (int i = 0; i < count; i++)
+		{
+			// Polar angle
+			float theta = MathF.Acos(1.0f - 2.0f * (i + 0.5f) / count);
+			// Azimuthal angle
+			float phi = MathF.Tau * i / goldenRatio;
+
+			directions.Add(new Vector3
+			(
+				MathF.Sin(theta) * MathF.Cos(phi),
+				MathF.Cos(theta),
+				MathF.Sin(theta) * MathF.Sin(phi)
+			));
+		}
 
 		return [.. directions];
 	}
 
 	private Vector3 RandomUnitVector()
 	{
-		// TODO: RandomUnitVector
-		return new Vector3();
+		float z = Random.Shared.NextSingle() * 2.0f - 1.00f;
+		float theta = Random.Shared.NextSingle() * MathF.Tau;
+		float r = MathF.Sqrt(MathF.Max(0.0f, 1.0f - z * z));
+		return new Vector3(r * MathF.Cos(theta), r * MathF.Sin(theta), z);
 	}
 
 	private void AddChildInEditor(Node parent, Node node)
