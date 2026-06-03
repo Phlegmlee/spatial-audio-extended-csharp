@@ -194,6 +194,18 @@ public partial class SpatialAudioDebug : Node3D
 		}
 	}
 
+	public override void _Process(double delta)
+	{
+		bool editorSelected = IsEditorSelected();
+		if (DebugDrawRays || DebugDrawRadius || DebugDrawPlayingState || editorSelected)
+		{
+			DrawDebugShapes(editorSelected);
+		}
+		else _debugImmediate?.ClearSurfaces();
+
+		UpdateDebugConnectorLine();
+	}
+
 	/// <summary>
 	/// Look for unhandled input for the debug pannel interactions.
 	/// </summary>
@@ -862,6 +874,18 @@ public partial class SpatialAudioDebug : Node3D
 		};
 
 		return result;
+	}
+
+	private bool IsEditorSelected()
+	{
+		if (!Engine.IsEditorHint()) return false;
+
+		EditorSelection editorSelection = _parentAudioPlayer.editorInterface.GetSelection();
+		foreach (Node node in editorSelection.GetSelectedNodes())
+		{
+			if (node == this) return true;
+		}
+		return false;
 	}
 
 	#endregion
