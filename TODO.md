@@ -7,7 +7,7 @@
   - [ ] SpatialReflectionNavigationAgent
   - [ ] SpatialAudioPlayer3D
   - [ ] SpatialAudioDebug
-  - [ ] Preset materials
+  - [x] Preset materials
 - [ ] Example Level
   - [ ] Create an example level that tests all functionality and can also be used as a demo.
 - [ ] Documentation

@@ -1071,7 +1071,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		{ "Down", [Vector3.Down, Vector3.Zero]},
 	};
 
-	private float _lastUpdateTime = 0.0f;
+	private double _lastUpdateTime = 0.0;
 	private bool _setupComplete = false;
 	private bool _initialScanDone = false;
 	private bool _autoplayFadeActive = false;
@@ -1127,7 +1127,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	private float _activeTotalAbsorptionTransitionSpeed = _DefaultTotalAbsorptionTransitionSpeed;
 
 #if TOOLS
-	private EditorInterface _editorInterface = null;
+	internal EditorInterface editorInterface = null;
 #endif
 
 	#endregion
@@ -1340,14 +1340,39 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	public override void _PhysicsProcess(double delta)
 	{
-		// TODO: PhysicsProcess
+		if (!_setupComplete) return;
+
+		_lastUpdateTime += delta;
+
+		if (_lastUpdateTime > UpdateFrequency)
+		{
+			if (RoomSizeReverb) UpdateReverbRays();
+			Node3D listener = GetListener();
+			if (listener != null) OnSpatialAudioUpdate(listener);
+			if (!_initialScanDone && !Engine.IsEditorHint())
+			{
+				_initialScanDone = true;
+				SnapParameters(!_autoplayFadeActive);
+			}
+			_lastUpdateTime = 0.0;
+		}
+
+		if (!Engine.IsEditorHint()) LerpParameters(delta);
+	}
+
+	private void UpdateReverbRays()
+	{
+		for (int i = 0; i < distances.Count; i++)
+		{
+			UpdateOmniDistance(raycasts[i], i);
+		}
 	}
 
 	#endregion
 
 	#region  Parameter Lerping
 
-	private void LerpParameters(float delta)
+	private void LerpParameters(double delta)
 	{
 		// TODO LerpParameters
 	}
@@ -1426,7 +1451,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 #if TOOLS
 		if (Engine.IsEditorHint())
 		{
-			Viewport viewport = _editorInterface.GetEditorViewport3D();
+			Viewport viewport = editorInterface.GetEditorViewport3D();
 			if (viewport != null) return viewport.GetCamera3D();
 			return null;
 		}
@@ -1519,18 +1544,6 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		return new Vector3();
 	}
 
-	private bool IsEditorSelected()
-	{
-		if (!Engine.IsEditorHint()) return false;
-
-		EditorSelection editorSelection = _editorInterface.GetSelection();
-		foreach (Node node in editorSelection.GetSelectedNodes())
-		{
-			if (node == this) return true;
-		}
-		return false;
-	}
-
 	private void AddChildInEditor(Node parent, Node node)
 	{
 		parent.AddChild(node, true);
@@ -1590,7 +1603,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 		RebuildRaycasts();
 
-		_editorInterface = EditorInterface.Singleton;
+		editorInterface = EditorInterface.Singleton;
 
 		_setupComplete = true;
 
