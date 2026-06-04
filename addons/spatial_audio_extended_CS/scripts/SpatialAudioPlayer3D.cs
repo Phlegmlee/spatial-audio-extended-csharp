@@ -1044,7 +1044,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private List<bool> _rayTotalAbsorption = [];
 
-	private List<float> _rayTotalAbsorptionTransitionSpeeds = [];
+	private List<float> _rayTotalAbTrSpds = [];
 
 	private List<string> _rayMaterialNames = [];
 
@@ -1611,7 +1611,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		{
 			AcousticMaterial mat = ab.AcousticMaterial;
 			_rayTotalAbsorption[index] = mat.TotalAbsorption;
-			if (mat.TotalAbsorption) _rayTotalAbsorptionTransitionSpeeds[index] = mat.TotalAbsorptionTransitionSpeed;
+			if (mat.TotalAbsorption) _rayTotalAbTrSpds[index] = mat.TotalAbsorptionTransitionSpeed;
 
 			if (SurfaceAbsorption)
 			{
@@ -1689,9 +1689,9 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			if (bounceMat.TotalAbsorption)
 			{
 				_rayTotalAbsorption[index] = true;
-				_rayTotalAbsorptionTransitionSpeeds[index] = MathF.Min
+				_rayTotalAbTrSpds[index] = MathF.Min
 				(
-					_rayTotalAbsorptionTransitionSpeeds[index],
+					_rayTotalAbTrSpds[index],
 					bounceMat.TotalAbsorptionTransitionSpeed
 				);
 			}
@@ -1717,9 +1717,106 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		ray.Enabled = false;
 	}
 
+	// FIXME: I changed A LOT about this function on rewrite, ensure it works as intended.
 	private void UpdateReverb()
 	{
-		// TODO: UpdateReverb
+		if (reverbEffect == null) return;
+
+		if (!RoomSizeReverb)
+		{
+			targetReverbWetness = 0.0f;
+			targetReverbRoomSize = 0.0f;
+			targetReverbDamping = 0.0f;
+			_openness = 0.0f;
+			return;
+		}
+
+
+		int omniCount = Math.Max(distances.Count - 1, 1);
+		int activeCount = 0;
+		float roomSize = 0.0f, floorCosTh = MathF.Cos(FloorAngleThreshold * (MathF.PI / 180f));
+
+		int abCount = 0;
+		bool totalAbHit = false;
+		float abSum = 0.0f, totalAbTrSp = _DefaultTotalAbsorpTransSpeed;
+
+		float opennessSum = 0.0f;
+
+		float activeF = 0.0f;
+
+		for (int i = 0; i < omniCount; i++)
+		{
+			if (IgnoreFloor && i < _rayDirections.Count
+				&& (_rayDirections[i].Y <= -floorCosTh)) continue;
+
+			activeCount += 1;
+			float d = distances[i];
+			bool escaped = i < reflectionEscaped.Count && reflectionEscaped[i];
+			totalAbHit = i < _rayTotalAbsorption.Count && _rayTotalAbsorption[i];
+
+			activeF = MathF.Max(activeCount, 1);
+
+			if (escaped)
+			{
+				opennessSum += 1.0f;
+				roomSize += 1.0f / activeF;
+			}
+			else if (d > 0.0f)
+			{
+				opennessSum += d / MaxRaycastDistance;
+				roomSize += (d / MaxRaycastDistance) / activeF;
+			}
+
+			if (totalAbHit && i < _rayTotalAbTrSpds.Count)
+			{
+				totalAbTrSp = MathF.Min(totalAbTrSp, _rayTotalAbTrSpds[i]);
+			}
+
+			if (SurfaceAbsorption && i < _rayAbsorptions.Count && _rayAbsorptions[i] >= 0.0f)
+			{
+				abSum += _rayAbsorptions[i];
+				abCount += 1;
+			}
+		}
+
+		_openness = opennessSum / activeF;
+		roomSize = MathF.Min(roomSize, 1.0f);
+		float wetness = MathF.Pow(1.0f - _openness, 2.0f);
+		float damping = float.Lerp(0.0f, 1.0f, _openness);
+
+		if (SurfaceAbsorption && abCount > 0)
+		{
+			float avgAb = abSum / abCount;
+			wetness *= float.Lerp(1.0f, 1.0f - avgAb, AbsorptionWetnessInfluence);
+			damping = Math.Clamp(damping + avgAb * AbsorptionDampingInfluence, 0.0f, 1.0f);
+		}
+
+		if (totalAbHit)
+		{
+			_activeTotalAbsorpTransSpeed = totalAbTrSp;
+			wetness = MathF.Min(wetness, _TotalAbsorpReverbWetCap);
+			damping = MathF.Max(damping, _TotalAbsorpReverbDampFloor);
+		}
+
+		float prevRoom = _lastReverbRoomSize, prevWet = _lastReverbWetness, prevDamp = _lastReverbDamping;
+
+		targetReverbRoomSize = roomSize;
+		targetReverbWetness = wetness;
+		targetReverbDamping = damping;
+
+		float chkRoom = MathF.Abs(targetReverbRoomSize - prevRoom);
+		float chkWet = MathF.Abs(targetReverbWetness - prevWet);
+		float chkDamp = MathF.Abs(targetReverbDamping - prevDamp);
+
+		if (chkRoom > 0.01f || chkWet > 0.01f || chkDamp > 0.01f)
+		{
+			EmitSignal(SignalName.ReverbUpdated, targetReverbRoomSize, targetReverbWetness, targetReverbDamping);
+			EmitSignal(SignalName.ReverbZoneChanged, targetReverbRoomSize, targetReverbWetness);
+		}
+
+		_lastReverbRoomSize = targetReverbRoomSize;
+		_lastReverbWetness = targetReverbWetness;
+		_lastReverbDamping = targetReverbDamping;
 	}
 
 	#endregion
@@ -1802,7 +1899,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		reflectionEscaped.Add(false);
 		_rayAbsorptions.Add(0.0f);
 		_rayTotalAbsorption.Add(false);
-		_rayTotalAbsorptionTransitionSpeeds.Add(_DefaultTotalAbsorpTransSpeed);
+		_rayTotalAbTrSpds.Add(_DefaultTotalAbsorpTransSpeed);
 		_rayMaterialNames.Add("");
 	}
 
@@ -1816,7 +1913,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		reflectionEscaped.Clear();
 		_rayAbsorptions.Clear();
 		_rayTotalAbsorption.Clear();
-		_rayTotalAbsorptionTransitionSpeeds.Clear();
+		_rayTotalAbTrSpds.Clear();
 		_rayMaterialNames.Clear();
 		targetRaycast = null;
 	}
