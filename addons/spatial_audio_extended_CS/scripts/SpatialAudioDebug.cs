@@ -204,6 +204,26 @@ public partial class SpatialAudioDebug : Node3D
 		}
 		else _debugImmediate?.ClearSurfaces();
 
+		if (DisplayDebugInfo)
+		{
+			Node3D listener = _parentAudioPlayer.GetListener();
+			float dist = listener.GlobalPosition.DistanceTo(_parentAudioPlayer.GlobalPosition);
+			float outer = _parentAudioPlayer.InnerRadius + _parentAudioPlayer.FalloffDistance;
+			bool inRange = !_parentAudioPlayer.EnableVolumeAttenuation || dist <= outer;
+
+			if (inRange && listener!= null) PrintDebug(listener);
+			else
+			{
+				if (_debugPanel != null) _debugPanel.Visible = false;
+				if (_debugConnectorLine != null) _debugConnectorLine.Visible = false;
+			}
+		}
+		else
+		{
+			if (_debugPanel != null) _debugPanel.Visible = false;
+			if (_debugConnectorLine != null) _debugConnectorLine.Visible = false;
+		}
+
 		UpdateDebugConnectorLine();
 	}
 
