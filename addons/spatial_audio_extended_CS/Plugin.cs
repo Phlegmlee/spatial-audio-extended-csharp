@@ -25,6 +25,8 @@ public partial class Plugin : EditorPlugin
 	{
 		Godot.Collections.Array<Node> selections = editorInterface.GetSelection().GetSelectedNodes();
 
+		if (selections.Count < 1) return;
+
 		if (selections.Count == 1 && selections[0] is CollisionObject3D || selections[0] is CsgShape3D)
 		{
 			Node3D selected = selections[0] as Node3D;
