@@ -522,8 +522,8 @@ public partial class SpatialAudioDebug : Node3D
 
 		if (_parentAudioPlayer.EnableAirAbsorption)
 		{
-			float combined = Math.Min(_parentAudioPlayer.targetLowpassCutoff, _parentAudioPlayer.targetAirAbsorptionCutoff);
-			text += $"Air Absorption    {_parentAudioPlayer.targetAirAbsorptionCutoff} Hz → {combined} Hz " +
+			float combined = Math.Min(_parentAudioPlayer.targetLowpassCutoff, _parentAudioPlayer.targetAirAbsorpCutoff);
+			text += $"Air Absorption    {_parentAudioPlayer.targetAirAbsorpCutoff} Hz → {combined} Hz " +
 			$"({_parentAudioPlayer.AirAbsorptionMinDistance}-{_parentAudioPlayer.AirAbsorptionMaxDistance} m) \n";
 		}
 

@@ -1050,12 +1050,12 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	internal RayCast3D targetRaycast = null;
 
-	private const float _TotalAbsorptionReverbWetnessCap = 0.05f;
-	private const float _TotalAbsorptionReverbDampingFloor = 0.90f;
+	private const float _TotalAbsorpReverbWetCap = 0.05f;
+	private const float _TotalAbsorpReverbDampFloor = 0.90f;
 	private const float _TotalAbsorptionLowpassHz = 20.0f;
 	private const float _TotalAbsorptionMuteDb = -120.0f;
-	private const float _TotalAbsorptionTransitionThresholdDb = -100.0f;
-	private const float _DefaultTotalAbsorptionTransitionSpeed = 2.5f;
+	private const float _TotalAbsorpTransThresholdDb = -100.0f;
+	private const float _DefaultTotalAbsorpTransSpeed = 2.5f;
 
 	private readonly Dictionary<string, Vector3[]> _classicRays = new()
 	{
@@ -1102,7 +1102,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	private float _basePanningStrength = 1.0f;
 	internal float targetPanningStrength = 1.0f;
 
-	internal float targetAirAbsorptionCutoff = 20000.0f;
+	internal float targetAirAbsorpCutoff = 20000.0f;
 
 	internal SceneTreeTimer pendingDelayTimer = null;
 
@@ -1122,9 +1122,9 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private ulong _externalOcclusionHoldUntilMsec = 0;
 
-	private bool _hardMutedByTotalAbsorption = false;
+	private bool _hardMutedByTotalAbsorp = false;
 
-	private float _activeTotalAbsorptionTransitionSpeed = _DefaultTotalAbsorptionTransitionSpeed;
+	private float _activeTotalAbsorpTransSpeed = _DefaultTotalAbsorpTransSpeed;
 
 #if TOOLS
 	internal EditorInterface editorInterface = null;
@@ -1374,7 +1374,49 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void LerpParameters(double delta)
 	{
-		// TODO LerpParameters
+		float tDelta = (float)delta;
+		float target = Math.Clamp(tDelta * LerpSpeed, 0.0f, 1.0f);
+		float tTotalAbsorp = Math.Clamp(tDelta * _activeTotalAbsorpTransSpeed, 0.0f, 1.0f);
+		bool totalAbsorpTrans = _hardMutedByTotalAbsorp
+		|| targetVolumeDb <= _TotalAbsorpTransThresholdDb
+		|| VolumeDb <= _TotalAbsorpTransThresholdDb;
+
+		float tVolume = target;
+		if (_autoplayFadeActive) tVolume = Math.Clamp(tDelta * AutoplayFadeInSpeed, 0.0f, 1.0f);
+		else if (totalAbsorpTrans) tVolume = tTotalAbsorp;
+
+		VolumeDb = float.Lerp(VolumeDb, targetVolumeDb, tVolume);
+		PanningStrength = float.Lerp(PanningStrength, targetPanningStrength, target);
+
+		if (lowpassFilter != null)
+		{
+			float combCutoff = MathF.Min(targetLowpassCutoff, targetAirAbsorpCutoff);
+			float curCut = MathF.Max(1.0f, lowpassFilter.CutoffHz);
+			float targetCut = MathF.Max(1.0f, combCutoff);
+			float tFilter;
+			if (totalAbsorpTrans) tFilter = tTotalAbsorp;
+			else tFilter = target;
+			lowpassFilter.CutoffHz = MathF.Exp(float.Lerp(MathF.Log(curCut), MathF.Log(targetCut), tFilter));
+		}
+
+		if (reverbEffect != null)
+		{
+			float tWet, tRvb;
+			if (_hardMutedByTotalAbsorp) tWet = 0.0f; else tWet = targetReverbWetness * MaxReverbWetness;
+			if (totalAbsorpTrans) tRvb = tTotalAbsorp; else tRvb = target;
+			reverbEffect.Wet = float.Lerp(reverbEffect.Wet, tWet, tRvb);
+			reverbEffect.RoomSize = float.Lerp(reverbEffect.RoomSize, targetReverbRoomSize, target);
+			reverbEffect.Damping = float.Lerp(reverbEffect.Damping, targetReverbDamping, target);
+		}
+
+		if (_autoplayFadeActive)
+		{
+			if (MathF.Abs(VolumeDb - targetVolumeDb) < 0.1f)
+			{
+				VolumeDb = targetVolumeDb;
+				_autoplayFadeActive = false;
+			}
+		}
 	}
 
 	private void SnapParameters(bool snapVolume = true)
@@ -1510,7 +1552,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		reflectionEscaped.Add(false);
 		_rayAbsorptions.Add(0.0f);
 		_rayTotalAbsorption.Add(false);
-		_rayTotalAbsorptionTransitionSpeeds.Add(_DefaultTotalAbsorptionTransitionSpeed);
+		_rayTotalAbsorptionTransitionSpeeds.Add(_DefaultTotalAbsorpTransSpeed);
 		_rayMaterialNames.Add("");
 	}
 
@@ -1631,7 +1673,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		_lastReverbRoomSize = targetReverbRoomSize;
 		_lastReverbWetness = targetReverbWetness;
 		_lastReverbDamping = targetReverbDamping;
-		_lastAirAbsorptionCutoff = targetAirAbsorptionCutoff;
+		_lastAirAbsorptionCutoff = targetAirAbsorpCutoff;
 	}
 
 	public override void _ExitTree()
