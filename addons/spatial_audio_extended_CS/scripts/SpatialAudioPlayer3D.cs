@@ -1447,9 +1447,11 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void OnSpatialAudioUpdate(Node3D listener)
 	{
-		UpdateVolumeAttenuation(listener);
-		UpdatePanningStrength(listener);
-		UpdateAirAbsorption(listener);
+		float dist = listener.GlobalPosition.DistanceTo(GlobalPosition);
+
+		UpdateVolumeAttenuation(listener, dist);
+		UpdatePanningStrength(listener, dist);
+		UpdateAirAbsorption(listener, dist);
 		UpdateReverb();
 		UpdateLowpass(listener);
 	}
@@ -1458,23 +1460,21 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	#region Volume Attenuation
 
-	private void UpdateVolumeAttenuation(Node3D listener)
+	private void UpdateVolumeAttenuation(Node3D listener, float distance)
 	{
 		if (!EnableVolumeAttenuation)
 		{ targetVolumeDb = ApplyExternalVolumeOffset(_baseVolumeDb); return; }
 
-		float dist = listener.GlobalPosition.DistanceTo(GlobalPosition);
-
-		if (_lastListenerDistance < 0.0f || MathF.Abs(dist - _lastListenerDistance) >= 0.5f)
+		if (_lastListenerDistance < 0.0f || MathF.Abs(distance - _lastListenerDistance) >= 0.5f)
 		{
-			_lastListenerDistance = dist;
-			EmitSignal(SignalName.ListenerDistanceChanged, dist);
+			_lastListenerDistance = distance;
+			EmitSignal(SignalName.ListenerDistanceChanged, distance);
 		}
 
 		float outerRadius = InnerRadius + FalloffDistance;
-		bool insideInner = dist <= InnerRadius;
-		bool inFalloff = dist > InnerRadius && dist <= outerRadius;
-		bool audible = dist <= outerRadius;
+		bool insideInner = distance <= InnerRadius;
+		bool inFalloff = distance > InnerRadius && distance <= outerRadius;
+		bool audible = distance <= outerRadius;
 
 		if (insideInner && !_wasInsideInner) EmitSignal(SignalName.InnerRadiusEntered, listener);
 		if (!insideInner && _wasInsideInner) EmitSignal(SignalName.InnerRadiusExited, listener);
@@ -1490,9 +1490,9 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		_wasAudible = audible;
 
 		if (insideInner) { targetVolumeDb = ApplyExternalVolumeOffset(_baseVolumeDb); return; }
-		if (dist >= outerRadius) { targetVolumeDb = ApplyExternalVolumeOffset(MinimumVolumeDb); return; }
+		if (distance >= outerRadius) { targetVolumeDb = ApplyExternalVolumeOffset(MinimumVolumeDb); return; }
 
-		float alpha = (dist - InnerRadius) / FalloffDistance;
+		float alpha = (distance - InnerRadius) / FalloffDistance;
 		float atten = ApplyAttenuationFunction(alpha);
 
 		float minGain = MathF.Pow(10.0f, MinimumVolumeDb / 20.0f);
@@ -1502,20 +1502,83 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		targetVolumeDb = ApplyExternalVolumeOffset(20.0f * MathF.Log(gain) / MathF.Log(10.0f));
 	}
 
-	private void UpdatePanningStrength(Node3D listener)
+	private void UpdatePanningStrength(Node3D listener, float distance)
 	{
-		// TODO: UpdatePanningStrength
+		if (!EnableVolumeAttenuation || Mathf.IsEqualApprox(InnerRadiusPanningStrength, 1.0f))
+		{
+			targetPanningStrength = _basePanningStrength;
+			return;
+		}
+
+		if (distance >= InnerRadius || InnerRadius <= 0.0f)
+		{
+			targetPanningStrength = _basePanningStrength;
+			return;
+		}
+
+		float ratio = distance / InnerRadius;
+		float centerPan = Math.Clamp(_basePanningStrength * InnerRadiusPanningStrength, 0.0f, 2.0f);
+		targetPanningStrength = float.Lerp(centerPan, _basePanningStrength, ratio);
 	}
 
-	private void UpdateAirAbsorption(Node3D listener)
+	private void UpdateAirAbsorption(Node3D listener, float distance)
 	{
-		// TODO: UpdateAirAbsorption
+		if (!EnableAirAbsorption) { targetAirAbsorpCutoff = 20000.0f; return; }
+
+		if (distance <= AirAbsorptionMinDistance)
+		{ targetAirAbsorpCutoff = AirAbsorptionCutoffFreqMin; return; }
+
+		if (distance >= AirAbsorptionMaxDistance)
+		{ targetAirAbsorpCutoff = AirAbsorptionCutoffFreqMax; return; }
+
+		float alpha = (distance - AirAbsorptionMinDistance) / MathF.Max(AirAbsorptionMaxDistance - AirAbsorptionMinDistance, 0.001f);
+
+		if (AirAbsorptionLogFreqScaling)
+		{
+			float logMin = MathF.Log(MathF.Max(AirAbsorptionCutoffFreqMin, 1.0f));
+			float logMax = MathF.Log(MathF.Max(AirAbsorptionCutoffFreqMax, 1.0f));
+			targetAirAbsorpCutoff = MathF.Exp(float.Lerp(logMin, logMax, alpha));
+		}
+		else
+		{
+			targetAirAbsorpCutoff = float.Lerp(AirAbsorptionCutoffFreqMin, AirAbsorptionCutoffFreqMax, alpha);
+		}
+
+		if (MathF.Abs(targetAirAbsorpCutoff - _lastAirAbsorptionCutoff) > 1.0f)
+		{
+			EmitSignal(SignalName.AirAbsorptionUpdated, targetAirAbsorpCutoff);
+			EmitSignal(SignalName.AirAbsorptionZoneChanged, targetAirAbsorpCutoff);
+			_lastAirAbsorptionCutoff = targetAirAbsorpCutoff;
+		}
 	}
 
 	private float ApplyAttenuationFunction(float alpha)
 	{
-		// TODO: ApplyAttenuationFunction
-		return 1.0f - alpha;
+		switch (AttenuationFunction)
+		{
+			case AttenuationFunctionEnum.Linear:
+				return 1.0f - alpha;
+
+			case AttenuationFunctionEnum.Logarithmic:
+				return 1.0f - MathF.Log(alpha * 9.0f + 1.0f) / MathF.Log(10.0f);
+
+			case AttenuationFunctionEnum.Inverse:
+				return 1.0f / 1.0f + alpha * 9.0f;
+
+			case AttenuationFunctionEnum.LogReverse:
+				return MathF.Log(1.0f + (1.0f - alpha) * 9.0f) / MathF.Log(10.0f);
+
+			case AttenuationFunctionEnum.NaturalSound:
+				return MathF.Pow(1.0f - alpha, 1.5f);
+
+			case AttenuationFunctionEnum.UserDefined:
+				if (UserAttenuationCurve != null)
+					return Math.Clamp(UserAttenuationCurve.Sample(Math.Clamp(alpha, 0.0f, 1.0f)), 0.0f, 1.0f);
+				return 1.0f - alpha;
+
+			default:
+				return 1.0f - alpha;
+		}
 	}
 
 	#endregion
