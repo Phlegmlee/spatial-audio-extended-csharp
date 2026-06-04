@@ -1421,7 +1421,24 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void SnapParameters(bool snapVolume = true)
 	{
-		// TODO SnapParameters
+		if (snapVolume && _hardMutedByTotalAbsorp) VolumeDb = _TotalAbsorptionMuteDb;
+		else VolumeDb = targetVolumeDb;
+
+		PanningStrength = targetPanningStrength;
+
+		if (lowpassFilter != null)
+		{
+			float combCutoff = MathF.Min(targetLowpassCutoff, targetAirAbsorpCutoff);
+			lowpassFilter.CutoffHz = MathF.Max(1.0f, combCutoff);
+		}
+
+		if (reverbEffect != null)
+		{
+			if (_hardMutedByTotalAbsorp) reverbEffect.Wet = 0.0f;
+			else reverbEffect.Wet = targetReverbWetness * MaxReverbWetness;
+			reverbEffect.RoomSize = targetReverbRoomSize;
+			reverbEffect.Damping = targetReverbDamping;
+		}
 	}
 
 	#endregion
