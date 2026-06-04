@@ -30,7 +30,7 @@ public partial class Plugin : EditorPlugin
 		if (selections.Count == 1 && selections[0] is CollisionObject3D || selections[0] is CsgShape3D)
 		{
 			Node3D selected = selections[0] as Node3D;
-			bool alreadyHas = AcousticBody.IsAcousticBodyOnNode(selected);
+			bool alreadyHas = AcousticBody.IsOnNode(selected);
 			if (!alreadyHas)
 			{
 				AddButton(selected);
@@ -85,7 +85,7 @@ public partial class Plugin : EditorPlugin
 			return;
 		}
 
-		if (AcousticBody.IsAcousticBodyOnNode(target))
+		if (AcousticBody.IsOnNode(target))
 		{
 			RemoveButton();
 			return;

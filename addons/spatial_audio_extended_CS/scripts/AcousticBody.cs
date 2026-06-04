@@ -39,7 +39,7 @@ public partial class AcousticBody : Node
 	/// </summary>
 	/// <param name="node">The node supposedly holding the <c>AcousticBody</c>.</param>
 	/// <returns>The FIRST <c>AcousticBody</c> found, or <c>null</c>.</returns>
-	internal static AcousticBody FindAcousticBodyOnNode(Node node)
+	internal static AcousticBody FindOnNode(Node node)
 	{
 		if (node == null) return null;
 
@@ -61,24 +61,24 @@ public partial class AcousticBody : Node
 	/// </summary>
 	/// <param name="collider">The <c>RayCast</c> collision.</param>
 	/// <returns>The FIRST <c>AcousticBody</c> found, or <c>null</c>.</returns>
-	internal static AcousticBody FindAcousticBodyForRaycastCollider(Node collider)
+	internal static AcousticBody FindForRayCollider(Node collider)
 	{
 		if (collider == null) return null;
 
 		// Direct lookup CollisionObject3D
-		AcousticBody lookupResult = FindAcousticBodyOnNode(collider);
+		AcousticBody lookupResult = FindOnNode(collider);
 		if (lookupResult != null) return lookupResult;
 
 		// Handle CSG shape internal static body 3D
 		Node parent = collider.GetParent();
-		if (parent != null && parent is CsgShape3D) return FindAcousticBodyOnNode(parent);
+		if (parent != null && parent is CsgShape3D) return FindOnNode(parent);
 
 		return null;
 	}
 
-	internal static bool IsAcousticBodyOnNode(Node node)
+	internal static bool IsOnNode(Node node)
 	{
-		return FindAcousticBodyOnNode(node) != null;
+		return FindOnNode(node) != null;
 	}
 
 	#endregion

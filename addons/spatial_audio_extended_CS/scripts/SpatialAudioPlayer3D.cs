@@ -1393,17 +1393,16 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			float combCutoff = MathF.Min(targetLowpassCutoff, targetAirAbsorpCutoff);
 			float curCut = MathF.Max(1.0f, lowpassFilter.CutoffHz);
 			float targetCut = MathF.Max(1.0f, combCutoff);
-			float tFilter;
+			float tFilter = target;
 			if (totalAbsorpTrans) tFilter = tTotalAbsorp;
-			else tFilter = target;
 			lowpassFilter.CutoffHz = MathF.Exp(float.Lerp(MathF.Log(curCut), MathF.Log(targetCut), tFilter));
 		}
 
 		if (reverbEffect != null)
 		{
-			float tWet, tRvb;
-			if (_hardMutedByTotalAbsorp) tWet = 0.0f; else tWet = targetReverbWetness * MaxReverbWetness;
-			if (totalAbsorpTrans) tRvb = tTotalAbsorp; else tRvb = target;
+			float tWet = 0.0f, tRvb = target;
+			if (!_hardMutedByTotalAbsorp) tWet = targetReverbWetness * MaxReverbWetness;
+			if (totalAbsorpTrans) tRvb = tTotalAbsorp;
 			reverbEffect.Wet = float.Lerp(reverbEffect.Wet, tWet, tRvb);
 			reverbEffect.RoomSize = float.Lerp(reverbEffect.RoomSize, targetReverbRoomSize, target);
 			reverbEffect.Damping = float.Lerp(reverbEffect.Damping, targetReverbDamping, target);
@@ -1587,7 +1586,135 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void UpdateOmniDistance(RayCast3D ray, int index)
 	{
-		// TODO: UpdateOmniDistance
+		ray.ForceRaycastUpdate();
+		reflectionPaths[index] = [];
+		reflectionEscaped[index] = false;
+		_rayAbsorptions[index] = -1.0f;
+
+		if (ray.GetCollider() == null)
+		{
+			distances[index] = MaxRaycastDistance;
+			reflectionEscaped[index] = true;
+			ray.Enabled = false;
+			return;
+		}
+
+		Vector3 firstHit = ray.GetCollisionPoint();
+		float totalDist = GlobalPosition.DistanceTo(firstHit);
+
+		// Sample absorption from first-hit surface (if it has one)
+		float firstAbsorp = -1.0f;
+		string firstMatName = "";
+		Node collider = ray.GetCollider() as Node;
+		AcousticBody ab = AcousticBody.FindForRayCollider(collider);
+		if (ab != null && ab.AcousticMaterial != null)
+		{
+			AcousticMaterial mat = ab.AcousticMaterial;
+			_rayTotalAbsorption[index] = mat.TotalAbsorption;
+			if (mat.TotalAbsorption) _rayTotalAbsorptionTransitionSpeeds[index] = mat.TotalAbsorptionTransitionSpeed;
+
+			if (SurfaceAbsorption)
+			{
+				firstAbsorp = (mat.AbsorptionLow + mat.AbsorptionMid + mat.AbsorptionHigh) / 3.0f;
+				if (mat.TotalAbsorption) firstAbsorp = 1.0f;
+			}
+
+			if (mat.ResourceName == "")
+			{
+				firstMatName = mat.ResourcePath.GetFile().GetBaseName();
+			}
+			else firstMatName = mat.ResourceName;
+		}
+		_rayAbsorptions[index] = firstAbsorp;
+		_rayMaterialNames[index] = firstMatName;
+
+		// Reflections below, check if valid to continue.
+		if (RayDistribution != RayDistributionEnum.FibonacciSphere || FibonacciRayReflections <= 0)
+		{
+			distances[index] = totalDist;
+			ray.Enabled = false;
+			return;
+		}
+
+		// Trace reflections using physics space
+		PhysicsDirectSpaceState3D space = GetWorld3D().DirectSpaceState;
+		PhysicsRayQueryParameters3D parameters = new() { CollisionMask = ReverbCollisionMask, };
+
+		List<Vector3> path = [GlobalPosition, firstHit];
+		Vector3 curPos = firstHit;
+		Vector3 incomDir = (firstHit - GlobalPosition).Normalized();
+		Vector3 curNorm = ray.GetCollisionNormal();
+		float remainDist = MaxRaycastDistance - totalDist;
+
+		// Accumulate absorp across all bounces
+		float absropSum = MathF.Max(firstAbsorp, 0.0f);
+		int absorpCount = 0;
+		if (firstAbsorp >= 0.0f) absorpCount = 1;
+
+		for (int i = 0; i < FibonacciRayReflections; i++)
+		{
+			if (remainDist <= 0.01f) break;
+
+			// Reflect about surfact normal
+			Vector3 reflectDir = (incomDir - 2.0f * incomDir.Dot(curNorm) * curNorm).Normalized();
+
+			// Offset to avoid self-intersection.
+			parameters.From = curPos + curNorm * 0.01f;
+			parameters.To = parameters.From + reflectDir * remainDist;
+
+			Godot.Collections.Dictionary result = space.IntersectRay(parameters);
+			if (result.Count <= 0)
+			{
+				Vector3 escapeEnd = parameters.From + reflectDir * remainDist;
+				path.Add(escapeEnd);
+				reflectionEscaped[index] = true;
+				break;
+			}
+
+			Vector3 hitPoint = (Vector3)result["position"];
+			float segDist = curPos.DistanceTo(hitPoint);
+			totalDist += segDist;
+			remainDist -= segDist;
+			path.Add(hitPoint);
+
+			// Emit signal for reverb/reflection ray collision
+			Node bounceCollider = (Node)result["collider"];
+			EmitSignal(SignalName.ReverbRayCollided, hitPoint, curPos, bounceCollider);
+
+			// Sample absorp from the bounced surface (if mat present)
+			AcousticBody bounceAb = AcousticBody.FindForRayCollider(bounceCollider);
+			if (bounceAb == null || bounceAb.AcousticMaterial == null) break;
+
+			AcousticMaterial bounceMat = bounceAb.AcousticMaterial;
+			if (bounceMat.TotalAbsorption)
+			{
+				_rayTotalAbsorption[index] = true;
+				_rayTotalAbsorptionTransitionSpeeds[index] = MathF.Min
+				(
+					_rayTotalAbsorptionTransitionSpeeds[index],
+					bounceMat.TotalAbsorptionTransitionSpeed
+				);
+			}
+
+			if (SurfaceAbsorption)
+			{
+				float bAbsorp = (bounceMat.AbsorptionLow + bounceMat.AbsorptionMid + bounceMat.AbsorptionHigh) / 3.0f;
+				if (bounceMat.TotalAbsorption) bAbsorp = 1.0f;
+				absropSum += bAbsorp;
+				absorpCount += 1;
+			}
+
+			incomDir = reflectDir;
+			curNorm = (Vector3)result["normal"];
+			curPos = hitPoint;
+		}
+
+		if (SurfaceAbsorption && absorpCount > 0)
+		{ _rayAbsorptions[index] = absropSum / absorpCount; }
+
+		distances[index] = totalDist;
+		reflectionPaths[index] = path;
+		ray.Enabled = false;
 	}
 
 	private void UpdateReverb()
