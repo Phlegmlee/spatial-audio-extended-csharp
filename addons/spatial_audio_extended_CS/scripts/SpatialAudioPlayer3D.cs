@@ -1447,7 +1447,11 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void OnSpatialAudioUpdate(Node3D listener)
 	{
-		// TODO: OnSpatialAudioUpdate
+		UpdateVolumeAttenuation(listener);
+		UpdatePanningStrength(listener);
+		UpdateAirAbsorption(listener);
+		UpdateReverb();
+		UpdateLowpass(listener);
 	}
 
 	#endregion
@@ -1456,7 +1460,46 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void UpdateVolumeAttenuation(Node3D listener)
 	{
-		// TODO: UpdateVolumeAttenuation
+		if (!EnableVolumeAttenuation)
+		{ targetVolumeDb = ApplyExternalVolumeOffset(_baseVolumeDb); return; }
+
+		float dist = listener.GlobalPosition.DistanceTo(GlobalPosition);
+
+		if (_lastListenerDistance < 0.0f || MathF.Abs(dist - _lastListenerDistance) >= 0.5f)
+		{
+			_lastListenerDistance = dist;
+			EmitSignal(SignalName.ListenerDistanceChanged, dist);
+		}
+
+		float outerRadius = InnerRadius + FalloffDistance;
+		bool insideInner = dist <= InnerRadius;
+		bool inFalloff = dist > InnerRadius && dist <= outerRadius;
+		bool audible = dist <= outerRadius;
+
+		if (insideInner && !_wasInsideInner) EmitSignal(SignalName.InnerRadiusEntered, listener);
+		if (!insideInner && _wasInsideInner) EmitSignal(SignalName.InnerRadiusExited, listener);
+
+		if (inFalloff && !_wasInFalloff) EmitSignal(SignalName.FalloffZoneEntered, listener);
+		if (!inFalloff && _wasInFalloff) EmitSignal(SignalName.FalloffZoneExited, listener);
+
+		if (audible && !_wasAudible) EmitSignal(SignalName.AttenuationZoneEntered, listener);
+		if (!audible && _wasAudible) EmitSignal(SignalName.FalloffZoneExited, listener);
+
+		_wasInsideInner = insideInner;
+		_wasInFalloff = inFalloff;
+		_wasAudible = audible;
+
+		if (insideInner) { targetVolumeDb = ApplyExternalVolumeOffset(_baseVolumeDb); return; }
+		if (dist >= outerRadius) { targetVolumeDb = ApplyExternalVolumeOffset(MinimumVolumeDb); return; }
+
+		float alpha = (dist - InnerRadius) / FalloffDistance;
+		float atten = ApplyAttenuationFunction(alpha);
+
+		float minGain = MathF.Pow(10.0f, MinimumVolumeDb / 20.0f);
+		float baseGain = MathF.Pow(10.0f, _baseVolumeDb / 20.0f);
+		float gain = float.Lerp(minGain, baseGain, atten);
+		gain = MathF.Max(gain, (float)1e-8);
+		targetVolumeDb = ApplyExternalVolumeOffset(20.0f * MathF.Log(gain) / MathF.Log(10.0f));
 	}
 
 	private void UpdatePanningStrength(Node3D listener)
