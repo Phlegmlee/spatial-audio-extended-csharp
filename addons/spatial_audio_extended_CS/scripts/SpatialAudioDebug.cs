@@ -193,6 +193,8 @@ public partial class SpatialAudioDebug : Node3D
 			CallDeferred(MethodName.EditorReady);
 			return;
 		}
+
+		_parentAudioPlayer = GetParent() as SpatialAudioPlayer3D;
 	}
 
 	public override void _Process(double delta)
