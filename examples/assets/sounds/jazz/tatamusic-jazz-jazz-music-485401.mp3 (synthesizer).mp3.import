@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://c4qmrek4m5y2r"
+path="res://.godot/imported/tatamusic-jazz-jazz-music-485401.mp3 (synthesizer).mp3-799d7d417fbc962448305f8912056a37.mp3str"
+
+[deps]
+
+source_file="res://examples/assets/sounds/jazz/tatamusic-jazz-jazz-music-485401.mp3 (synthesizer).mp3"
+dest_files=["res://.godot/imported/tatamusic-jazz-jazz-music-485401.mp3 (synthesizer).mp3-799d7d417fbc962448305f8912056a37.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4
