@@ -1,10 +1,14 @@
 [gd_scene format=3 uid="uid://7njco7xo0xkb"]
 
+[ext_resource type="Script" uid="uid://bgos5s1kel4wb" path="res://examples/character/PlayerEntity.cs" id="1_r5xgx"]
+
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_reqh7"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_reqh7"]
 
-[node name="PlayerEntity" type="CharacterBody3D" unique_id=1865326184]
+[node name="PlayerEntity" type="CharacterBody3D" unique_id=1865326184 node_paths=PackedStringArray("playerCamera")]
+script = ExtResource("1_r5xgx")
+playerCamera = NodePath("Camera3D")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=358907962]
 shape = SubResource("CapsuleShape3D_reqh7")

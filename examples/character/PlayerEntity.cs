@@ -2,6 +2,10 @@ using Godot;
 
 public partial class PlayerEntity : CharacterBody3D
 {
+	[Export] Camera3D playerCamera;
+	private Vector2 MouseInput = new();
+	private float _mouseSens = 0.1f;
+
 	public const float Speed = 5.0f;
 	public const float JumpVelocity = 4.5f;
 
@@ -21,9 +25,24 @@ public partial class PlayerEntity : CharacterBody3D
 			velocity.Y = JumpVelocity;
 		}
 
-		// Get the input direction and handle the movement/deceleration.
-		// As good practice, you should replace UI actions with custom gameplay actions.
+		// Switch Mouse Mode
+		if (Input.IsActionJustPressed("mouseMode"))
+		{
+			switch (Input.MouseMode)
+			{
+				case Input.MouseModeEnum.Visible:
+					Input.MouseMode = Input.MouseModeEnum.Captured;
+					break;
+				case Input.MouseModeEnum.Captured:
+					Input.MouseMode = Input.MouseModeEnum.Visible;
+					break;
+			}
+		}
+
+		HandleCameraRotation();
+
 		Vector2 inputDir = Input.GetVector("left", "right", "up", "down");
+		inputDir = inputDir.Rotated(-playerCamera.Rotation.Y);
 		Vector3 direction = (Transform.Basis * new Vector3(inputDir.X, 0, inputDir.Y)).Normalized();
 		if (direction != Vector3.Zero)
 		{
@@ -42,6 +61,23 @@ public partial class PlayerEntity : CharacterBody3D
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
-		
+		if
+		(
+			@event is InputEventMouseMotion mouseMotion
+			&& Input.MouseMode == Input.MouseModeEnum.Captured
+		)
+		{
+			MouseInput = mouseMotion.Relative;
+		}
+	}
+
+	private void HandleCameraRotation()
+	{
+		Vector3 camRot = playerCamera.RotationDegrees;
+		camRot.Y -= MouseInput.X * _mouseSens;
+		camRot.X -= MouseInput.Y * _mouseSens;
+		playerCamera.RotationDegrees = camRot;
+
+		MouseInput = Vector2.Zero;
 	}
 }
