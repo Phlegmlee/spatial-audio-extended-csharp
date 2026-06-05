@@ -550,7 +550,7 @@ public partial class SpatialAudioDebug : Node3D
 		if (isOccluded)
 		{
 			string wallsStr = ", ";
-			if (_parentAudioPlayer.lastWallMaterials.Length > 0) wallsStr += _parentAudioPlayer.lastWallMaterials;
+			if (_parentAudioPlayer.lastWallMaterials.Count > 0) wallsStr += _parentAudioPlayer.lastWallMaterials;
 			else wallsStr = "";
 
 			text += $"Occluded        YES, by {_parentAudioPlayer.lastWallCount} wall(s) \n";
@@ -565,7 +565,7 @@ public partial class SpatialAudioDebug : Node3D
 		text += $"Reverb Damp  {curRbDamp} Hz  → {_parentAudioPlayer.targetReverbDamping} Hz \n";
 
 		//text += $"";
-		// TODO: .............ugh
+		// TODO: .............ugh line 2144 in spatial_audio_player_3D.gd
 
 		_debugOverlayLabel.Text = text;
 		RefreshNavigationDebugVisibility();

@@ -1112,9 +1112,9 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	internal int lastWallCount = 0;
 
-	internal string[] lastWallMaterials = [];
+	internal List<string> lastWallMaterials = [];
 
-	internal float[] lastWallAbsorptions = [];
+	internal List<float> lastWallAbsorptions = [];
 
 	private float _baseVolumeDb = 0.0f;
 
@@ -1452,7 +1452,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		UpdatePanningStrength(listener, dist);
 		UpdateAirAbsorption(listener, dist);
 		UpdateReverb();
-		UpdateLowpass(listener);
+		UpdateLowpass(listener, dist);
 	}
 
 	#endregion
@@ -1823,9 +1823,168 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	#region Occlusion
 	
-	private void UpdateLowpass(Node3D listener)
+	private void UpdateLowpass(Node3D listener, float distance)
 	{
-		// TODO: UpdateLowpass
+		_hardMutedByTotalAbsorp = false;
+
+		if (lowpassFilter == null || !AudioOcclusion)
+		{ targetLowpassCutoff = OpenLowpassCutoff; return; }
+
+		int prevWallCount = lastWallCount;
+		if (IsExternalOcclusionHeld())
+		{
+			targetLowpassCutoff = OpenLowpassCutoff;
+			lastWallCount = 0;
+			lastWallMaterials.Clear();
+			lastWallAbsorptions.Clear();
+			if (prevWallCount > 0)
+			{
+				EmitSignal(SignalName.OcclusionChanged, 0, targetLowpassCutoff);
+				EmitSignal(SignalName.AudioUnoccluded, listener);
+			}
+			return;
+		}
+
+		if (targetRaycast == null) return;
+
+		float effMaxDist = MaxRaycastDistance;
+		if (EnableVolumeAttenuation) effMaxDist = InnerRadius + FalloffDistance;
+		else if (MaxDistance > 0.0f) effMaxDist = MaxDistance;
+
+		float distToPlayer = Math.Clamp(distance, 0.0f, effMaxDist);
+
+		if (distToPlayer >= effMaxDist)
+		{
+			targetRaycast.Enabled = false;
+			targetLowpassCutoff = OpenLowpassCutoff;
+			return;
+		}
+
+		targetRaycast.Enabled = true;
+		Vector3 rayDir = (listener.GlobalPosition - GlobalPosition).Normalized();
+		targetRaycast.TargetPosition = rayDir * distToPlayer;
+		targetRaycast.ForceRaycastUpdate();
+
+		PhysicsDirectSpaceState3D space = GetWorld3D().DirectSpaceState;
+		PhysicsRayQueryParameters3D parameters = new()
+		{
+			CollisionMask = OcclusionCollisionMask,
+			CollideWithAreas = false,
+		};
+
+		if (IgnoreListenerBody)
+		{
+			CharacterBody3D body = FindCharacterBody(listener);
+			if (body != null) parameters.Exclude = [body.GetRid()];
+		}
+
+		Vector3 marchPos = GlobalPosition;
+		int wallCount = 0;
+		float lowCutoff = OpenLowpassCutoff;
+		float openHz = OpenLowpassCutoff;
+		float occlHz = OccludedLowpassCutoffMinimum;
+		List<string> wallMats = [];
+		bool totalAbBlkd = false;
+		float totalAbTrSp = _DefaultTotalAbsorpTransSpeed;
+
+		float volRedDb = 0.0f;
+
+		lastWallAbsorptions.Clear();
+		for (int i = 0; i < MaxOcclusionHits; i++)
+		{
+			parameters.From = marchPos;
+			parameters.To = listener.GlobalPosition;
+			Godot.Collections.Dictionary result = space.IntersectRay(parameters);
+			if (result.Count <= 0) break;
+
+			Vector3 hitPoint = (Vector3)result["position"];
+			Vector3 hitNorm = (Vector3)result["normal"];
+			float distHit = GlobalPosition.DistanceTo(hitPoint);
+
+			if (distHit >= distToPlayer) break;
+
+			wallCount += 1;
+
+			Node collider = (Node)result["collider"];
+			AcousticBody aB = AcousticBody.FindForRayCollider(collider);
+			string matName = "AcousticMaterial";
+
+			float tHigh = FallbackTransmission;
+			float tLow = FallbackTransmission;
+			float abWeighted = -1.0f;
+
+			if (aB != null && aB.AcousticMaterial != null)
+			{
+				AcousticMaterial mat = aB.AcousticMaterial;
+				tHigh = mat.TransmissionHigh;
+				tLow = mat.TransmissionLow;
+				abWeighted = 0.7f * mat.AbsorptionHigh + 0.3f * mat.AbsorptionMid;
+				if (mat.TotalAbsorption)
+				{
+					totalAbBlkd = true;
+					totalAbTrSp = MathF.Min(totalAbTrSp, mat.TotalAbsorptionTransitionSpeed);
+					tHigh = 0.0f;
+					tLow = 0.0f;
+					abWeighted = 1.0f;
+				}
+				if (mat.ResourceName != "") matName = mat.ResourceName;
+				else if (mat.ResourcePath != "") matName = mat.ResourcePath.GetFile().GetBaseName();
+			}
+			wallMats.Add(matName);
+
+			if (abWeighted >= 0.0f)
+			{
+				lastWallAbsorptions.Add(Math.Clamp(abWeighted, 0.0f, 1.0f));
+				float interp = Math.Clamp(abWeighted, 0.0f, 1.0f);
+				float wallCutoff = openHz - interp * (openHz - occlHz);
+				lowCutoff *= wallCutoff / openHz;
+			}
+			else
+			{
+				lastWallAbsorptions.Add(-1.0f);
+				lowCutoff *= Math.Clamp(tHigh, 0.001f, 1.0f);
+			}
+
+			float rawDb = -20.0f * MathF.Log(MathF.Max(tLow, 0.001f)) / MathF.Log(10.0f);
+			volRedDb += rawDb * OcclusionVolumeStrength;
+
+			marchPos = hitPoint + rayDir * 0.02f;
+		}
+
+		lastWallCount = wallCount;
+		lastWallAbsorptions.Clear();
+		lastWallMaterials = wallMats;
+
+		if (wallCount != prevWallCount)
+		{
+			EmitSignal(SignalName.OcclusionChanged, wallCount, targetLowpassCutoff);
+			if (wallCount > 0 && prevWallCount == 0) EmitSignal(SignalName.AudioOccluded, listener, wallCount);
+			else if (wallCount == 0 && prevWallCount > 0) EmitSignal(SignalName.AudioUnoccluded, listener);
+		}
+
+		if (wallCount == 0) { targetLowpassCutoff = openHz; return; }
+
+		if (totalAbBlkd)
+		{
+			_hardMutedByTotalAbsorp = true;
+			_activeTotalAbsorpTransSpeed = totalAbTrSp;
+			targetLowpassCutoff = _TotalAbsorptionLowpassHz;
+			targetVolumeDb = _TotalAbsorptionMuteDb;
+			return;
+		}
+
+		lowCutoff = Math.Clamp(lowCutoff, occlHz, openHz);
+
+		volRedDb = MathF.Min(volRedDb, MaxOcclusionVolumeReduction);
+		targetVolumeDb = MathF.Max(targetVolumeDb - volRedDb, MinimumVolumeDb);
+
+		float strFloor = 20.0f;
+		if (OcclusionStrength <= 1.0f) targetLowpassCutoff = float.Lerp(openHz, lowCutoff, OcclusionStrength);
+		else
+		{
+			float excess = (OcclusionStrength - 1.0f) / 4.0f;
+			targetLowpassCutoff = float.Lerp(lowCutoff, strFloor, excess);
+		}
 	}
 
 	#endregion
