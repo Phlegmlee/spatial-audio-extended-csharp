@@ -260,7 +260,7 @@ public partial class SpatialAudioDebug : Node3D
 	/// </summary>
 	public override void _ExitTree()
 	{
-		_parentAudioPlayer.EnableDebugToggled -= OnEnableDebugToggled;
+		if (_parentAudioPlayer != null) _parentAudioPlayer.EnableDebugToggled -= OnEnableDebugToggled;
 
 		if (IsInstanceValid(_debugPanel))
 		{
@@ -974,6 +974,9 @@ public partial class SpatialAudioDebug : Node3D
 	/// </summary>
 	private void EditorReady()
 	{
+		// ProcessPriority = 100;
+		// ProcessPhysicsPriority = 100;
+
 		_parentAudioPlayer = GetParent() as SpatialAudioPlayer3D;
 		_parentAudioPlayer.EnableDebugToggled += OnEnableDebugToggled;
 
