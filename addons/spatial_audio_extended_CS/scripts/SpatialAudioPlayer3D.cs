@@ -1032,21 +1032,21 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	internal List<RayCast3D> raycasts = [];
 	internal List<float> distances = [];
-	private List<string> _rayNames = [];
+	internal List<string> rayNames = [];
 
-	private List<Vector3> _rayDirections = [];
+	internal List<Vector3> rayDirections = [];
 
 	internal List<List<Vector3>> reflectionPaths = [];
 
 	internal List<bool> reflectionEscaped = [];
 
-	private List<float> _rayAbsorptions = [];
+	internal List<float> rayAbsorptions = [];
 
 	private List<bool> _rayTotalAbsorption = [];
 
 	private List<float> _rayTotalAbTrSpds = [];
 
-	private List<string> _rayMaterialNames = [];
+	internal List<string> rayMatNames = [];
 
 	internal RayCast3D targetRaycast = null;
 
@@ -1086,8 +1086,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	private float _lastReverbDamping = -1.0f;
 	private float _lastAirAbsorpCutoff = -1.0f;
 
-	private string _busName = "";
-	private int _busIndex = 1;
+	internal string busName = "";
+	internal int busIndex = 1;
 	internal AudioEffectReverb reverbEffect = null;
 	internal AudioEffectLowPassFilter lowpassFilter = null;
 
@@ -1097,7 +1097,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	internal float targetReverbDamping = 0.0f;
 	internal float targetVolumeDb = 0.0f;
 
-	private float _openness = 0.0f;
+	internal float openness = 0.0f;
 
 	private float _basePanningStrength = 1.0f;
 	internal float targetPanningStrength = 1.0f;
@@ -1207,18 +1207,18 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 				AttenuationModel = AttenuationModelEnum.Disabled;
 			}
 
-			_busName = AudioBusPrefix + "#" + new Random().Next(1, 1000).ToString();
+			busName = AudioBusPrefix + "#" + new Random().Next(1, 1000).ToString();
 			AudioServer.AddBus();
-			_busIndex = AudioServer.BusCount - 1;
-			AudioServer.SetBusName(_busIndex, _busName);
-			AudioServer.SetBusSend(_busIndex, Bus);
-			this.Bus = _busName;
+			busIndex = AudioServer.BusCount - 1;
+			AudioServer.SetBusName(busIndex, busName);
+			AudioServer.SetBusSend(busIndex, Bus);
+			this.Bus = busName;
 
-			AudioServer.AddBusEffect(_busIndex, new AudioEffectReverb(), 0);
-			reverbEffect = AudioServer.GetBusEffect(_busIndex, 0) as AudioEffectReverb;
+			AudioServer.AddBusEffect(busIndex, new AudioEffectReverb(), 0);
+			reverbEffect = AudioServer.GetBusEffect(busIndex, 0) as AudioEffectReverb;
 
-			AudioServer.AddBusEffect(_busIndex, new AudioEffectLowPassFilter(), 1);
-			lowpassFilter = AudioServer.GetBusEffect(_busIndex, 1) as AudioEffectLowPassFilter;
+			AudioServer.AddBusEffect(busIndex, new AudioEffectLowPassFilter(), 1);
+			lowpassFilter = AudioServer.GetBusEffect(busIndex, 1) as AudioEffectLowPassFilter;
 		}
 
 		EditorReady();
@@ -1592,7 +1592,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		ray.ForceRaycastUpdate();
 		reflectionPaths[index] = [];
 		reflectionEscaped[index] = false;
-		_rayAbsorptions[index] = -1.0f;
+		rayAbsorptions[index] = -1.0f;
 
 		if (ray.GetCollider() == null)
 		{
@@ -1628,8 +1628,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			}
 			else firstMatName = mat.ResourceName;
 		}
-		_rayAbsorptions[index] = firstAbsorp;
-		_rayMaterialNames[index] = firstMatName;
+		rayAbsorptions[index] = firstAbsorp;
+		rayMatNames[index] = firstMatName;
 
 		// Reflections below, check if valid to continue.
 		if (RayDistribution != RayDistributionEnum.FibonacciSphere || FibonacciRayReflections <= 0)
@@ -1713,7 +1713,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		}
 
 		if (SurfaceAbsorption && absorpCount > 0)
-		{ _rayAbsorptions[index] = absropSum / absorpCount; }
+		{ rayAbsorptions[index] = absropSum / absorpCount; }
 
 		distances[index] = totalDist;
 		reflectionPaths[index] = path;
@@ -1730,7 +1730,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			targetReverbWetness = 0.0f;
 			targetReverbRoomSize = 0.0f;
 			targetReverbDamping = 0.0f;
-			_openness = 0.0f;
+			openness = 0.0f;
 			return;
 		}
 
@@ -1749,8 +1749,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 		for (int i = 0; i < omniCount; i++)
 		{
-			if (IgnoreFloor && i < _rayDirections.Count
-				&& (_rayDirections[i].Y <= -floorCosTh)) continue;
+			if (IgnoreFloor && i < rayDirections.Count
+				&& (rayDirections[i].Y <= -floorCosTh)) continue;
 
 			activeCount += 1;
 			float d = distances[i];
@@ -1775,17 +1775,17 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 				totalAbTrSp = MathF.Min(totalAbTrSp, _rayTotalAbTrSpds[i]);
 			}
 
-			if (SurfaceAbsorption && i < _rayAbsorptions.Count && _rayAbsorptions[i] >= 0.0f)
+			if (SurfaceAbsorption && i < rayAbsorptions.Count && rayAbsorptions[i] >= 0.0f)
 			{
-				abSum += _rayAbsorptions[i];
+				abSum += rayAbsorptions[i];
 				abCount += 1;
 			}
 		}
 
-		_openness = opennessSum / activeF;
+		openness = opennessSum / activeF;
 		roomSize = MathF.Min(roomSize, 1.0f);
-		float wetness = MathF.Pow(1.0f - _openness, 2.0f);
-		float damping = float.Lerp(0.0f, 1.0f, _openness);
+		float wetness = MathF.Pow(1.0f - openness, 2.0f);
+		float damping = float.Lerp(0.0f, 1.0f, openness);
 
 		if (SurfaceAbsorption && abCount > 0)
 		{
@@ -1908,9 +1908,9 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 			wallCount += 1;
 
-			Node collider = (Node)result["collider"];
+			Node collider = (Node)(GodotObject)result["collider"];
 			AcousticBody aB = AcousticBody.FindForRayCollider(collider);
-			string matName = "AcousticMaterial";
+			string matName = "(none)";
 
 			float tHigh = FallbackTransmission;
 			float tLow = FallbackTransmission;
@@ -2055,28 +2055,28 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	{
 		raycasts.Add(raycast);
 		distances.Add(0.0f);
-		_rayNames.Add(rayName);
-		_rayDirections.Add(direction);
+		rayNames.Add(rayName);
+		rayDirections.Add(direction);
 		reflectionPaths.Add([]);
 		reflectionEscaped.Add(false);
-		_rayAbsorptions.Add(0.0f);
+		rayAbsorptions.Add(0.0f);
 		_rayTotalAbsorption.Add(false);
 		_rayTotalAbTrSpds.Add(_DEF_TOTAL_ABSORP_TRANS_SPD);
-		_rayMaterialNames.Add("");
+		rayMatNames.Add("");
 	}
 
 	private void ClearRayMetadata()
 	{
 		raycasts.Clear();
 		distances.Clear();
-		_rayNames.Clear();
-		_rayDirections.Clear();
+		rayNames.Clear();
+		rayDirections.Clear();
 		reflectionPaths.Clear();
 		reflectionEscaped.Clear();
-		_rayAbsorptions.Clear();
+		rayAbsorptions.Clear();
 		_rayTotalAbsorption.Clear();
 		_rayTotalAbTrSpds.Clear();
-		_rayMaterialNames.Clear();
+		rayMatNames.Clear();
 		targetRaycast = null;
 	}
 
@@ -2189,7 +2189,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 		if (!Engine.IsEditorHint())
 		{
-			int index = AudioServer.GetBusIndex(_busName);
+			int index = AudioServer.GetBusIndex(busName);
 			if (index >= 0) AudioServer.RemoveBus(index);
 		}
 	}

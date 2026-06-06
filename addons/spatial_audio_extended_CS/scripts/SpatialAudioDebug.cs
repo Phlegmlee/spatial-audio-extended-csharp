@@ -351,6 +351,7 @@ public partial class SpatialAudioDebug : Node3D
 		_debugContentVbox = new() { Name = nameof(_debugContentVbox) };
 
 		_debugOverlayLabel = NewRtLabel(nameof(_debugOverlayLabel), new Vector2(420, 0));
+		_debugContentVbox.AddChild(_debugOverlayLabel);
 
 		_debugRaysToggle = NewButton("▶ Rays", nameof(_debugRaysToggle), alignment: HorizontalAlignment.Left);
 		_debugRaysToggle.Pressed += OnRaysTogglePressed;
@@ -449,9 +450,9 @@ public partial class SpatialAudioDebug : Node3D
 		string txt = $"";
 		txt += $"Agent               {nodeName} \n";
 		txt += $"Profile             {profile}\n";
-		txt += $"Path                {pathPoints} pts  len: {pathLength} m  direct: {directDistance} m  ratio: {detourRatio} \n";
+		txt += $"Path                {pathPoints} pts  len: {pathLength:F2} m  direct: {directDistance:F2} m  ratio: {detourRatio:F2} \n";
 		txt += $"Graph               {graphPoints} pts  {graphEdges} edges\n";
-		txt += $"Proxy               waypoint: {proxyWaypointIndex}  to listener: {proxyToListener} m  to origin: {proxyToOrigin} m \n";
+		txt += $"Proxy               waypoint: {proxyWaypointIndex}  to listener: {proxyToListener:F2} m  to origin: {proxyToOrigin:F2} m \n";
 		string backoff, spring = "";
 		if ((bool)proxyBackoffActive) backoff = "ON"; else backoff = "OFF";
 		if ((bool)springArmActive)
@@ -494,8 +495,8 @@ public partial class SpatialAudioDebug : Node3D
 
 		double fps = Engine.GetFramesPerSecond();
 		double frameTimeMs = 1000.0 / Math.Max(fps, 1.0);
-		string headerText = $"SpatialAudio  {_parentAudioPlayer.Name}";
-		headerText += $"FPS: {fps}  {frameTimeMs} ms";
+		string headerText = $"SpatialAudio  {_parentAudioPlayer.Name}  ";
+		headerText += $"FPS: {fps:.##}  {frameTimeMs:.##} ms";
 		if (_debugHeaderLabel != null) _debugHeaderLabel.Text = headerText;
 
 		if (_debugMinimized) return;
@@ -522,55 +523,197 @@ public partial class SpatialAudioDebug : Node3D
 		}
 
 		string text = "\n";
-		text += $"Listener Dist    {distanceToListener} m  (max: {effectiveMaxDist} m) \n";
+		text += $"Listener Dist    {distanceToListener:F2} m  (max: {effectiveMaxDist:F2} m) \n";
 
 		if (_parentAudioPlayer.EnableVolumeAttenuation)
 		{
 			float inner = _parentAudioPlayer.InnerRadius;
 			float outer = inner + _parentAudioPlayer.FalloffDistance;
-			string zone;
+			string zone = "OUTSIDE";
 			if (distanceToListener <= inner) zone = "INNER";
 			else if (distanceToListener < outer) zone = "FALLOFF";
-			else zone = "OUTSIDE";
 
-			text += $"Attenuation      {inner} m / {outer} m   zone: {zone} \n";
+			text += $"Attenuation      {inner:F2} m / {outer:F2} m   zone: {zone} \n";
 			text += $"Atten. Func      {_parentAudioPlayer.AttenuationFunction} \n";
 			if (!Mathf.IsEqualApprox(_parentAudioPlayer.InnerRadiusPanningStrength, 1.0))
 			{
-				text += $"Panning        {_parentAudioPlayer.PanningStrength} → " +
-				$"{_parentAudioPlayer.targetPanningStrength} (inner: x{_parentAudioPlayer.InnerRadiusPanningStrength}) \n";
+				text += $"Panning        {_parentAudioPlayer.PanningStrength:F2} → " +
+				$"{_parentAudioPlayer.targetPanningStrength:F2} (inner: x{_parentAudioPlayer.InnerRadiusPanningStrength:F2}) \n";
 			}
 		}
 
 		if (_parentAudioPlayer.EnableAirAbsorption)
 		{
 			float combined = Math.Min(_parentAudioPlayer.targetLowpassCutoff, _parentAudioPlayer.targetAirAbsorpCutoff);
-			text += $"Air Absorption    {_parentAudioPlayer.targetAirAbsorpCutoff} Hz → {combined} Hz " +
-			$"({_parentAudioPlayer.AirAbsorptionMinDistance}-{_parentAudioPlayer.AirAbsorptionMaxDistance} m) \n";
+			text += $"Air Absorption    {_parentAudioPlayer.targetAirAbsorpCutoff:F2} Hz → {combined:F2} Hz " +
+			$"({_parentAudioPlayer.AirAbsorptionMinDistance:F2}-{_parentAudioPlayer.AirAbsorptionMaxDistance:F2} m) \n";
 		}
 
 		if (isOccluded)
 		{
-			string wallsStr = ", ";
-			if (_parentAudioPlayer.lastWallMats.Count > 0) wallsStr += _parentAudioPlayer.lastWallMats;
+			string wallsStr = "";
+			if (_parentAudioPlayer.lastWallMats.Count > 0)
+			{
+				foreach (string s in _parentAudioPlayer.lastWallMats)
+				{
+					wallsStr += s;
+				}
+			}
 			else wallsStr = "";
 
-			text += $"Occluded        YES, by {_parentAudioPlayer.lastWallCount} wall(s) \n";
-			if (wallsStr != "") text += $"Materials     {wallsStr} \n";
+			text += $"Occluded        YES, by {_parentAudioPlayer.lastWallCount} wall(s) with ";
+			if (wallsStr != "") text += $"Materials, {wallsStr} \n";
 		}
 		else text += $"Occluded        NO \n";
 
-		text += $"Lowpass Cutoff  {curLpHz} Hz  → {_parentAudioPlayer.targetLowpassCutoff} Hz \n";
-		text += $"Reverb Wet  {curRbWet} Hz  → {_parentAudioPlayer.targetReverbWetness} Hz " +
-		$"(max: {_parentAudioPlayer.MaxReverbWetness}) \n";
-		text += $"Reverb Room  {curRbRoom} Hz  → {_parentAudioPlayer.targetReverbRoomSize} Hz \n";
-		text += $"Reverb Damp  {curRbDamp} Hz  → {_parentAudioPlayer.targetReverbDamping} Hz \n";
+		text += $"Lowpass Cutoff  {curLpHz:F2} Hz  → {_parentAudioPlayer.targetLowpassCutoff:F2} Hz \n";
+		text += $"Reverb Wet  {curRbWet:F2} Hz  → {_parentAudioPlayer.targetReverbWetness:F2} Hz " +
+		$"(max: {_parentAudioPlayer.MaxReverbWetness:F2}) \n";
+		text += $"Reverb Room  {curRbRoom:F2} Hz  → {_parentAudioPlayer.targetReverbRoomSize:F2} Hz \n";
+		text += $"Reverb Damp  {curRbDamp:F2} Hz  → {_parentAudioPlayer.targetReverbDamping:F2} Hz \n";
 
 		//text += $"";
-		// TODO: .............ugh line 2144 in spatial_audio_player_3D.gd
+
+		if (_parentAudioPlayer.SurfaceAbsorption)
+		{
+			List<float> validAbs = [];
+			foreach (float ab in _parentAudioPlayer.lastWallAbsorps)
+			{
+				if (ab >= 0.0f) validAbs.Add(ab);
+			}
+
+			List<float> rayAbs = _parentAudioPlayer.rayAbsorptions;
+			float abSum = 0.0f;
+			int abCount = 0;
+			for (int i = 0; i < rayAbs.Count; i++)
+			{
+				if (rayAbs[i] >= 0.0f)
+				{
+					abSum += rayAbs[i];
+					abCount += 1;
+				}
+			}
+			float avgAbs = abSum / Math.Max(abCount, 1);
+			text += $"Avg Absorp  {avgAbs:F2}    {abCount} surfaces \n";
+		}
+
+		float opennessPct = _parentAudioPlayer.openness * 100.0f;
+
+		string envLabel = "INDOOR";
+		if (opennessPct > 50.0f) envLabel = "OUTDOOR";
+		else if (opennessPct > 10.0f) envLabel = "SEMI-OPEN";
+		text += $"Openness      {opennessPct:.##}%  {envLabel} \n";
+
+		bool floorIgnored = _parentAudioPlayer.IgnoreFloor;
+		if (floorIgnored)text += $"Floor Ignored (IsFloorAngle = {_parentAudioPlayer.FloorAngleThreshold:.##}) deg \n";
+
+		float hitSum = 0.0f;
+		int hitCount = 0;
+		List<float> distances = _parentAudioPlayer.distances;
+		List<bool> rEscaped = _parentAudioPlayer.reflectionEscaped;
+		List<Vector3> rDirs = _parentAudioPlayer.rayDirections;
+		float floorCos = MathF.Cos(_parentAudioPlayer.FloorAngleThreshold * (MathF.PI / 180f));
+		for (int i = 0; i < distances.Count - 1; i++)
+		{
+			if (floorIgnored && i < rDirs.Count && rDirs[i].Y <= floorCos) continue;
+
+			bool rayEscaped = i < rEscaped.Count && rEscaped[i];
+			if (!rayEscaped && distances[i] > 0.0f)
+			{
+				hitSum += distances[i];
+				hitCount += 1;
+			}
+		}
+		float avgDist = hitSum / Math.Max(hitCount, 1);
+		text += $"Est. Room Size    {avgDist * 2.0f:F2} m  (avg of {hitCount} hits) \n";
+		text += $"Volume      {_parentAudioPlayer.VolumeDb:F2} → {_parentAudioPlayer.targetVolumeDb:F2} \n";
+		text += $"Effects     {EffectsEnabled} \n";
+		text += $"Bus         {_parentAudioPlayer.busName}  (idx {_parentAudioPlayer.busIndex}) \n";
+
+		text += $"Press {DebugToggleEffectsKey} to toggle effects | {DebugToggleShapesKey} to toggle shapes \n";
+
+		text += $"Ray Mode       {_parentAudioPlayer.RayDistribution}   ({_parentAudioPlayer.rayNames.Count - 1}) \n";
 
 		_debugOverlayLabel.Text = text;
 		RefreshNavigationDebugVisibility();
+
+		List<string> rayNames = _parentAudioPlayer.rayNames;
+
+		if (_externalNavigationDebugActive && _debugNavigationLabel != null)
+		{
+			_debugNavigationLabel.Text = FormatNavigationDebugText();
+		}
+		else if (_debugNavigationLabel != null) _debugNavigationLabel.Text = "";
+
+		if (_debugRaysToggle != null)
+		{
+			int omniRayCount = Math.Max(rayNames.Count - 1, 0);
+			string arrow = "▶";
+			if (_debugRaysExpanded) arrow = "▼";
+			else arrow = "▶";
+
+			_debugRaysToggle.Text = $"{arrow} Rays {omniRayCount}";
+		}
+
+		if (_debugRaysLabel != null)
+		{
+			string r = "";
+			for (int i = 0; i < distances.Count; i++)
+			{
+				string rayName = "?";
+				if (i < rayNames.Count) rayName = rayNames[i];
+
+				bool hasRef = i < _parentAudioPlayer.reflectionPaths.Count && _parentAudioPlayer.reflectionPaths.Count > 2;
+				bool escaped = i < _parentAudioPlayer.reflectionEscaped.Count && _parentAudioPlayer.reflectionEscaped[i];
+				string dStr = "", matStr = "";
+				if (_parentAudioPlayer.SurfaceAbsorption
+				&& i < _parentAudioPlayer.rayMatNames.Count
+				&& _parentAudioPlayer.rayMatNames[i] != "")
+				{
+					float absVal = -1.0f;
+					if (i < _parentAudioPlayer.rayAbsorptions.Count) absVal = _parentAudioPlayer.rayAbsorptions[i];
+					if (absVal >= 0.0f) matStr = $"   {_parentAudioPlayer.rayMatNames[i]} (abs: {absVal})";
+					else matStr = $"  {_parentAudioPlayer.rayMatNames[i]}";
+				}
+
+				if (floorIgnored) dStr = "(floor)";
+				else if (escaped && !hasRef) dStr = "∞ (open)";
+				else if (distances[i] > 0.0f) dStr = $"{distances[i]:F2} m";
+				else dStr = "--";
+
+				if (hasRef)
+				{
+					_debugRayReflectiosExpanded.TryGetValue(i, out bool isExpanded);
+					string arrow = "▶";
+					if (isExpanded) arrow = "▼";
+					int refCount = _parentAudioPlayer.reflectionPaths[i].Count - 2;
+					string escTag = "";
+					if (escaped) { refCount -= 1; escTag = "(escaped)"; }
+					r += $"Ray_{i}{arrow}  {rayName}  ({dStr} refl){refCount}{matStr}\n";
+
+					if (isExpanded)
+					{
+						List<Vector3> path = _parentAudioPlayer.reflectionPaths[i];
+						for (int seg = 0; i < path.Count - 1; i++)
+						{
+							float segDist = path[seg].DistanceTo(path[seg + 1]);
+							bool isEscape = escaped && seg == path.Count - 2;
+							if (seg == 0) r += $"   ● seg {seg} {segDist:F2} m \n";
+							else if (isEscape) r += $"   ● seg {seg} {segDist:F2} m  {escTag}\n";
+							else r += $"   ● seg {seg} {segDist:F2} m\n";
+						}
+					}
+					else
+					{
+						if (floorIgnored) r += $"   {rayName}   {dStr}  {matStr}\n";
+						else if (escaped) r += $"   {rayName}   {dStr}  {escTag}\n";
+						else r += $"   {rayName}   {dStr}  {matStr}\n";
+					}
+				}
+			}
+			_debugRaysLabel.Text = r;
+		}
+		// TODO: 2269
 	}
 
 	#endregion
