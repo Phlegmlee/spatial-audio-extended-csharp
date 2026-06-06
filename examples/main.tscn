@@ -4,6 +4,7 @@
 [ext_resource type="AudioStream" uid="uid://dt8g88e04qhn8" path="res://examples/assets/sounds/alice_01_carroll_128kb.mp3" id="1_oe2cu"]
 [ext_resource type="Script" uid="uid://ckl5ow8qws0hb" path="res://addons/spatial_audio_extended_CS/scripts/SpatialAudioDebug.cs" id="2_aqi44"]
 [ext_resource type="PackedScene" uid="uid://7njco7xo0xkb" path="res://examples/character/PlayerEntity.tscn" id="4_pw243"]
+[ext_resource type="PackedScene" uid="uid://cw0xah68t6ekg" path="res://examples/objects/speaker.tscn" id="4_w7hkg"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_pw243"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -46,18 +47,10 @@ _surfaces = [{
 [sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_dvvjd"]
 data = PackedVector3Array(-0.5, -2.5, -4.5, 0, -2.5, -5, -0.5, -2.5, -5, 0, -2.5, -5, -0.5, -2.5, 5, 0.5, -2.5, -5, -0.5, -2.5, 5, 0, -2.5, -5, -0.5, -2.5, -4.5, 0.5, -2.5, -5, 0, 2.5, -5, 0, -2.5, -5, 0.5, -2.5, -5, -0.5, -2.5, 5, 0.5, -2.5, 5, -0.5, -2.5, 5, -0.5, -2.5, -4.5, -0.5, 2.5, 5, 0.5, -2.5, -5, 0.5, -2.5, 5, 0.5, 2.5, 5, -0.5, -2.5, 5, 0.5, 2.5, 5, 0.5, -2.5, 5, 0.5, -2.5, -5, 0.5, 2.5, -5, 0, 2.5, -5, 0.5, -2.5, -5, 0.5, 2.5, 5, 0.5, 2.5, -5, -0.5, 2.5, 5, -0.5, -2.5, -4.5, -0.5, 2.5, -4.5, -0.5, 2.5, -5, 0, 2.5, -5, 0.5, 2.5, 5, 0.5, 2.5, 5, 0, 2.5, -5, 0.5, 2.5, -5, 0.5, 2.5, 5, -0.5, 2.5, -4.5, -0.5, 2.5, -5, -0.5, -2.5, 5, -0.5, 2.5, 5, 0.5, 2.5, 5, -0.5, 2.5, -4.5, 0.5, 2.5, 5, -0.5, 2.5, 5, -10, -2.5, -5.5, -10, -2.5, -5, -9.5, -2.5, -5, -10, -2.5, -5.5, -10, 2.5, -5.5, -10, -2.5, -5, -10, -2.5, -5.5, -9.5, -2.5, -5, -0.5, -2.5, -5, -9.5, -2.5, -5, -9.5, -2.5, -4.5, -0.5, -2.5, -5, -9.5, 2.5, -4.5, -0.5, -2.5, -4.5, -9.5, -2.5, -4.5, -10, 2.5, -5.5, -10, 2.5, -5, -10, -2.5, -5, -10, 2.5, -5.5, -9.5, 2.5, -5, -10, 2.5, -5, -10, -2.5, -5.5, 0, 2.5, -5.5, -10, 2.5, -5.5, -10, 2.5, -5.5, 0, 2.5, -5.5, -9.5, 2.5, -5, -9.5, 2.5, -5, -0.5, 2.5, -4.5, -9.5, 2.5, -4.5, -10, -2.5, -5.5, -0.5, -2.5, -5, 0, -2.5, -5.5, -0.5, -2.5, -5, -9.5, -2.5, -4.5, -0.5, -2.5, -4.5, -10, -2.5, -5.5, 0, -2.5, -5.5, 0, 2.5, -5.5, 0, -2.5, -5.5, -0.5, -2.5, -5, 0, -2.5, -5, 0, -2.5, -5.5, 0, -2.5, -5, 0, 2.5, -5, -0.5, -2.5, -4.5, -9.5, 2.5, -4.5, -0.5, 2.5, -4.5, 0, 2.5, -5.5, -0.5, 2.5, -5, -9.5, 2.5, -5, -0.5, 2.5, -5, -0.5, 2.5, -4.5, -9.5, 2.5, -5, 0, -2.5, -5.5, 0, 2.5, -5, 0, 2.5, -5.5, 0, 2.5, -5.5, 0, 2.5, -5, -0.5, 2.5, -5, -10.5, -2.5, -5, -10.5, -2.5, 5, -10, -2.5, -5, -10, -2.5, -5, -10.5, -2.5, 5, -9.5, -2.5, -5, -10.5, -2.5, 5, -9.5, -2.5, -4.5, -9.5, -2.5, -5, -10.5, -2.5, -5, -10, -2.5, -5, -10.5, 2.5, -5, -10.5, -2.5, -5, -10.5, 2.5, -5, -10.5, -2.5, 5, -9.5, -2.5, 5, -9.5, 2.5, -4.5, -9.5, -2.5, -4.5, -9.5, -2.5, -4.5, -10.5, -2.5, 5, -9.5, -2.5, 5, -10.5, -2.5, 5, -9.5, 2.5, 5, -9.5, -2.5, 5, -10.5, 2.5, -5, -10, -2.5, -5, -10, 2.5, -5, -9.5, 2.5, -4.5, -10, 2.5, -5, -9.5, 2.5, -5, -10.5, 2.5, -5, -10, 2.5, -5, -9.5, 2.5, 5, -9.5, 2.5, 5, -10, 2.5, -5, -9.5, 2.5, -4.5, -10.5, -2.5, 5, -10.5, 2.5, -5, -10.5, 2.5, 5, -9.5, -2.5, 5, -9.5, 2.5, 5, -9.5, 2.5, -4.5, -10.5, -2.5, 5, -10.5, 2.5, 5, -9.5, 2.5, 5, -10.5, 2.5, -5, -9.5, 2.5, 5, -10.5, 2.5, 5)
 
-[sub_resource type="Curve" id="Curve_d2j2t"]
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_w7hkg"]
+points = PackedVector3Array(-9.015873, -2.5873017, -5.5873017, -0.81032753, 2.6507936, -4.3650794, -0.81032753, 2.6507936, -5.5873017, -9.015873, 2.6507936, -4.3650794, -0.81032753, -2.5873017, -4.3650794, -0.81032753, -2.5873017, -5.5873017, -9.015873, 2.6507936, -5.5873017, -9.015873, -2.5873017, -4.3650794)
 
-[sub_resource type="ArrayMesh" id="ArrayMesh_d2j2t"]
-_surfaces = [{
-"aabb": AABB(-0.5, -0.25, -0.5, 1, 0.5, 1),
-"attribute_data": PackedByteArray("GPYVPgAAAAAAAAAAAAAAAAAAAD8AAAA/AAAAPwAAAAAAACA/AAAAAAAAID8AAIA/AAAAPwAAAAAY9hU+AAAAAAAAAD8AAAA/AAAgPwAAAAAAAEA/AAAAAAAAQD8AAIA/AAAAAAAAAAAa9hU+AAAAAAAAAD8AAAA/AADAPgAAAAAAAAA/AAAAAAAAAD8AAIA/GvYVPgAAAAD///8+AAAAAAAAAD8AAAA/AACAPgAAAAAAAMA+AAAAAAAAwD4AAIA/eIJaPwAAAAAAAAA/AAAAAAAAAD8AAAA/AABAPwAAAAAAAGA/AAAAAAAAYD8AAIA/AACAPwAAAAB4glo/AAAAAAAAAD8AAAA/AABgPwAAAAAAAAAAAAAAAAAAAAAAAIA/////PgAAAAB6glo/AAAAAAAAAD8AAAA/AAAAPgAAAAAAAIA+AAAAAAAAgD4AAIA/eoJaPwAAAAAAAIA/AAAAAAAAAD8AAAA/AAAAAAAAAAAAAAA+AAAAAAAAAD4AAIA/"),
-"format": 34359738391,
-"primitive": 3,
-"uv_scale": Vector4(0, 0, 0, 0),
-"vertex_count": 48,
-"vertex_data": PackedByteArray("9AS1vgAAgL7yBLW+AAAAvwAAgL4uvTuzAAAAAAAAgL4AAAAAAAAAvwAAgL4uvTuz9AS1vgAAgL7yBLW+AAAAAAAAgD4AAAAALt7MMQAAgL4AAAC/9AS1vgAAgL7yBLW+AAAAAAAAgL4AAAAA9AS1vgAAgL7yBLW+Lt7MMQAAgL4AAAC/AAAAAAAAgD4AAAAAAAAAvwAAgL4uvTuz8wS1vgAAgL7zBLU+AAAAAAAAgL4AAAAA8wS1vgAAgL7zBLU+AAAAvwAAgL4uvTuzAAAAAAAAgD4AAAAA8wS1vgAAgL7zBLU+Lr27sgAAgL4AAAA/AAAAAAAAgL4AAAAALr27sgAAgL4AAAA/8wS1vgAAgL7zBLU+AAAAAAAAgD4AAAAA8QS1PgAAgL71BLW+Lt7MMQAAgL4AAAC/AAAAAAAAgL4AAAAALt7MMQAAgL4AAAC/8QS1PgAAgL71BLW+AAAAAAAAgD4AAAAAAAAAPwAAgL4AAAAA8QS1PgAAgL71BLW+AAAAAAAAgL4AAAAA8QS1PgAAgL71BLW+AAAAPwAAgL4AAAAAAAAAAAAAgD4AAAAALr27sgAAgL4AAAA/8wS1PgAAgL7zBLU+AAAAAAAAgL4AAAAA8wS1PgAAgL7zBLU+Lr27sgAAgL4AAAA/AAAAAAAAgD4AAAAA8wS1PgAAgL7zBLU+AAAAPwAAgL4AAAAAAAAAAAAAgL4AAAAAAAAAPwAAgL4AAAAA8wS1PgAAgL7zBLU+AAAAAAAAgD4AAAAA/38AAP///x//fwAA//++Ev9/AAD///8//z//v0Dtn/YENYHape8hlv9//////0Dt/38AAP///z//fwAA////H/9/AAD///8/BDWB2qXvTd7/P///QO1Arf9//////73S/38AAHyl/7//fwAA/7//v/9/AAD///+/gloEtVkQ3en/P/+/vhJeif9///8AAEDt/38AAP+//7//fwAA////v/9/AAD///+//3//v74SvdKCWgS1WRCwof9///8AAECt/38AAP+//z//fwAA////P/9/AAD///8//z///4HaXsn6yoHaYsPSt/9///+B2v+//38AAHyl/z//fwAA/7//P/9/AAD///8/+sqB2lkQ3Wn/v/+/vhJfCf9///8AAL4S/38AAP///7//fwAA////3/9/AAD///+/fKUEtZw8LMj/f/+/fSWftv9///99Jf+//38AAP///9//fwAA//9A7f9/AAD///+//7//v0BtXsl8pQS1vFPSt/9///+CWv+/")
-}]
+[sub_resource type="Curve" id="Curve_oe2cu"]
 
 [node name="Main" type="Node3D" unique_id=910781270]
 
@@ -85,21 +78,29 @@ mesh = SubResource("ArrayMesh_dvvjd")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="U-Wall" unique_id=1104757732]
 shape = SubResource("ConcavePolygonShape3D_dvvjd")
 
-[node name="SpatialAudioPlayer3D" type="AudioStreamPlayer3D" parent="U-Wall" unique_id=537351186]
+[node name="Speaker" parent="U-Wall" unique_id=2038329287 instance=ExtResource("4_w7hkg")]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -5, 0, 0)
+
+[node name="U-Wall2" type="StaticBody3D" parent="U-Wall" unique_id=1655337601]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+
+[node name="U-Wall_mesh" type="MeshInstance3D" parent="U-Wall/U-Wall2" unique_id=1673403904]
+mesh = SubResource("ArrayMesh_dvvjd")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="U-Wall/U-Wall2" unique_id=1801330669]
+shape = SubResource("ConvexPolygonShape3D_w7hkg")
+
+[node name="SpatialAudioPlayer3D" type="AudioStreamPlayer3D" parent="U-Wall" unique_id=1620569877]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 0)
 stream = ExtResource("1_oe2cu")
 autoplay = true
 script = ExtResource("1_d2j2t")
-UserAttenuationCurve = SubResource("Curve_d2j2t")
+UserAttenuationCurve = SubResource("Curve_oe2cu")
 EnableDebug = true
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
 
-[node name="AcousticDebugger" type="Node3D" parent="U-Wall/SpatialAudioPlayer3D" unique_id=306897412]
+[node name="AcousticDebugger" type="Node3D" parent="U-Wall/SpatialAudioPlayer3D" unique_id=1774974581]
 script = ExtResource("2_aqi44")
 
-[node name="Speaker" type="MeshInstance3D" parent="U-Wall" unique_id=970375707]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -5, 0, 0)
-mesh = SubResource("ArrayMesh_d2j2t")
-
 [node name="PlayerEntity" parent="." unique_id=1865326184 instance=ExtResource("4_pw243")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 2, 0)

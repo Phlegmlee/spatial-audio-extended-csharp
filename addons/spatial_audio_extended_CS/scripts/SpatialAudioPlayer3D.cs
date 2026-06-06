@@ -670,7 +670,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		set => _innerRadius = value;
 	}
 
-	private float _falloffDistance = 2.0f;
+	private float _falloffDistance = 20.0f;
 	/// <summary>
 	/// The distance beyond the inner radius over which the sound
 	/// fades from full volume to silence. The outer boundary equals
@@ -1358,7 +1358,6 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			_lastUpdateTime = 0.0;
 		}
 
-		if (!Engine.IsEditorHint()) LerpParameters(delta);
 		if (Engine.IsEditorHint()) return;
 
 		LerpParameters(delta);
@@ -2035,7 +2034,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private float ApplyExternalVolumeOffset(float volumeValue)
 	{
-		return (float)Math.MaxMagnitude(volumeValue + _externalVolumeDbOffset, _minimumVolumeDb);
+		return MathF.Max(volumeValue + _externalVolumeDbOffset, MinimumVolumeDb);
 	}
 
 	private void SetPlayInitiated()

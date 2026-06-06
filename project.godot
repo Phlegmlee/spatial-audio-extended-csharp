@@ -15,6 +15,10 @@ config/tags=PackedStringArray("c#", "plugin")
 run/main_scene="uid://dvon5jj5cxuvp"
 config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 
+[display]
+
+window/size/always_on_top=true
+
 [dotnet]
 
 project/assembly_name="spatial-audio-extended-csharp"
