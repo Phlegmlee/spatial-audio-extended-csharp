@@ -1189,40 +1189,39 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	/// </summary>
 	public override void _Ready()
 	{
-		if (Engine.IsEditorHint())
+		if (!Engine.IsEditorHint())
 		{
-			CallDeferred(MethodName.EditorReady);
-			return;
+			_baseVolumeDb = VolumeDb;
+			targetVolumeDb = VolumeDb;
+			_basePanningStrength = PanningStrength;
+			targetPanningStrength = PanningStrength;
+
+			if (Autoplay && AutoplayFadeIn)
+			{
+				VolumeDb = MinimumVolumeDb;
+				_autoplayFadeActive = true;
+			}
+
+			if (EnableVolumeAttenuation)
+			{
+				AttenuationModel = AttenuationModelEnum.Disabled;
+			}
+
+			_busName = AudioBusPrefix + "#" + new Random().Next(1, 1000).ToString();
+			AudioServer.AddBus();
+			_busIndex = AudioServer.BusCount - 1;
+			AudioServer.SetBusName(_busIndex, _busName);
+			AudioServer.SetBusSend(_busIndex, Bus);
+			this.Bus = _busName;
+
+			AudioServer.AddBusEffect(_busIndex, new AudioEffectReverb(), 0);
+			reverbEffect = AudioServer.GetBusEffect(_busIndex, 0) as AudioEffectReverb;
+
+			AudioServer.AddBusEffect(_busIndex, new AudioEffectLowPassFilter(), 1);
+			lowpassFilter = AudioServer.GetBusEffect(_busIndex, 1) as AudioEffectLowPassFilter;
 		}
 
-		_baseVolumeDb = VolumeDb;
-		targetVolumeDb = VolumeDb;
-		_basePanningStrength = PanningStrength;
-		targetPanningStrength = PanningStrength;
-
-		if (Autoplay && AutoplayFadeIn)
-		{
-			VolumeDb = MinimumVolumeDb;
-			_autoplayFadeActive = true;
-		}
-
-		if (EnableVolumeAttenuation)
-		{
-			AttenuationModel = AttenuationModelEnum.Disabled;
-		}
-
-		_busName = AudioBusPrefix + "#" + new Random().Next(1, 1000).ToString();
-		AudioServer.AddBus();
-		_busIndex = AudioServer.BusCount - 1;
-		AudioServer.SetBusName(_busIndex, _busName);
-		AudioServer.SetBusSend(_busIndex, Bus);
-		this.Bus = _busName;
-
-		AudioServer.AddBusEffect(_busIndex, new AudioEffectReverb(), 0);
-		reverbEffect = AudioServer.GetBusEffect(_busIndex, 0) as AudioEffectReverb;
-
-		AudioServer.AddBusEffect(_busIndex, new AudioEffectLowPassFilter(), 1);
-		lowpassFilter = AudioServer.GetBusEffect(_busIndex, 1) as AudioEffectLowPassFilter;
+		EditorReady();
 	}
 
 	private void RebuildRaycasts()
@@ -1334,6 +1333,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		targetRaycast = targetRay;
 		AddRayMetadata(targetRay, nameof(targetRay), Vector3.Forward);
 		AddChild(targetRay, false, InternalMode.Front);
+
+		_setupComplete = true;
 	}
 
 	#region Physics Process
@@ -1358,6 +1359,9 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		}
 
 		if (!Engine.IsEditorHint()) LerpParameters(delta);
+		if (Engine.IsEditorHint()) return;
+
+		LerpParameters(delta);
 	}
 
 	private void UpdateReverbRays()
@@ -2164,13 +2168,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	/// </summary>
 	private void EditorReady()
 	{
-		if (!Engine.IsEditorHint()) return;
-
 		RebuildRaycasts();
-
-		editorInterface = EditorInterface.Singleton;
-
-		_setupComplete = true;
 
 		_lastListenerDistance = -1.0f;
 		_wasInsideInner = false;
@@ -2180,6 +2178,10 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		_lastReverbWetness = targetReverbWetness;
 		_lastReverbDamping = targetReverbDamping;
 		_lastAirAbsorptionCutoff = targetAirAbsorpCutoff;
+
+		if (!Engine.IsEditorHint()) return;
+		
+		editorInterface = EditorInterface.Singleton;
 	}
 
 	public override void _ExitTree()
