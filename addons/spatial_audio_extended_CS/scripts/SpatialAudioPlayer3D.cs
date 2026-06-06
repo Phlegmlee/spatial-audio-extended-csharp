@@ -1050,12 +1050,12 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	internal RayCast3D targetRaycast = null;
 
-	private const float _TotalAbsorpReverbWetCap = 0.05f;
-	private const float _TotalAbsorpReverbDampFloor = 0.90f;
-	private const float _TotalAbsorptionLowpassHz = 20.0f;
-	private const float _TotalAbsorptionMuteDb = -120.0f;
-	private const float _TotalAbsorpTransThresholdDb = -100.0f;
-	private const float _DefaultTotalAbsorpTransSpeed = 2.5f;
+	private const float _TOTAL_ABSORP_REVERB_WET_CAP = 0.05f;
+	private const float _TOTAL_ABSORP_REVERB_DAMP_FLOOR = 0.90f;
+	private const float _TOTAL_ABSORP_LOW_PASS_HZ = 20.0f;
+	private const float _TOTAL_ABSORP_MUTE_DB = -120.0f;
+	private const float _TOTAL_ABSORP_TRANS_THRESH_DB = -100.0f;
+	private const float _DEF_TOTAL_ABSORP_TRANS_SPD = 2.5f;
 
 	private readonly Dictionary<string, Vector3[]> _classicRays = new()
 	{
@@ -1084,7 +1084,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	private float _lastReverbRoomSize = -1.0f;
 	private float _lastReverbWetness = -1.0f;
 	private float _lastReverbDamping = -1.0f;
-	private float _lastAirAbsorptionCutoff = -1.0f;
+	private float _lastAirAbsorpCutoff = -1.0f;
 
 	private string _busName = "";
 	private int _busIndex = 1;
@@ -1112,19 +1112,19 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	internal int lastWallCount = 0;
 
-	internal List<string> lastWallMaterials = [];
+	internal List<string> lastWallMats = [];
 
-	internal List<float> lastWallAbsorptions = [];
+	internal List<float> lastWallAbsorps = [];
 
-	private float _baseVolumeDb = 0.0f;
+	private float _baseVolDb = 0.0f;
 
-	private float _externalVolumeDbOffset = 0.0f;
+	private float _extVolDbOffset = 0.0f;
 
-	private ulong _externalOcclusionHoldUntilMsec = 0;
+	private ulong _extOcclHoldUntilMsec = 0;
 
 	private bool _hardMutedByTotalAbsorp = false;
 
-	private float _activeTotalAbsorpTransSpeed = _DefaultTotalAbsorpTransSpeed;
+	private float _activeTotalAbsorpTransSpeed = _DEF_TOTAL_ABSORP_TRANS_SPD;
 
 #if TOOLS
 	internal EditorInterface editorInterface = null;
@@ -1142,17 +1142,17 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	/// <param name="offset">Extra dB reduction desired.</param>
 	internal void SetExternalVolumeDbOffset(float offset)
 	{
-		_externalVolumeDbOffset = offset;
+		_extVolDbOffset = offset;
 	}
 
 	internal float GetExternalVolumeDbOffset()
 	{
-		return _externalVolumeDbOffset;
+		return _extVolDbOffset;
 	}
 
 	internal void ClearExternalVolumeDbOffset()
 	{
-		_externalVolumeDbOffset = 0.0f;
+		_extVolDbOffset = 0.0f;
 	}
 
 	/// <summary>
@@ -1166,17 +1166,17 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		if (durationMs <= 0) return;
 
 		ulong until = Time.GetTicksMsec() + durationMs;
-		_externalOcclusionHoldUntilMsec = Math.Max(_externalOcclusionHoldUntilMsec, until);
+		_extOcclHoldUntilMsec = Math.Max(_extOcclHoldUntilMsec, until);
 	}
 
 	internal void ClearExternalOcclusionHold()
 	{
-		_externalOcclusionHoldUntilMsec = 0;
+		_extOcclHoldUntilMsec = 0;
 	}
 
 	internal bool IsExternalOcclusionHeld()
 	{
-		return Time.GetTicksMsec() < _externalOcclusionHoldUntilMsec;
+		return Time.GetTicksMsec() < _extOcclHoldUntilMsec;
 	}
 
 	#endregion
@@ -1191,7 +1191,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	{
 		if (!Engine.IsEditorHint())
 		{
-			_baseVolumeDb = VolumeDb;
+			_baseVolDb = VolumeDb;
 			targetVolumeDb = VolumeDb;
 			_basePanningStrength = PanningStrength;
 			targetPanningStrength = PanningStrength;
@@ -1381,8 +1381,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		float target = Math.Clamp(tDelta * LerpSpeed, 0.0f, 1.0f);
 		float tTotalAbsorp = Math.Clamp(tDelta * _activeTotalAbsorpTransSpeed, 0.0f, 1.0f);
 		bool totalAbsorpTrans = _hardMutedByTotalAbsorp
-		|| targetVolumeDb <= _TotalAbsorpTransThresholdDb
-		|| VolumeDb <= _TotalAbsorpTransThresholdDb;
+		|| targetVolumeDb <= _TOTAL_ABSORP_TRANS_THRESH_DB
+		|| VolumeDb <= _TOTAL_ABSORP_TRANS_THRESH_DB;
 
 		float tVolume = target;
 		if (_autoplayFadeActive) tVolume = Math.Clamp(tDelta * AutoplayFadeInSpeed, 0.0f, 1.0f);
@@ -1423,7 +1423,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void SnapParameters(bool snapVolume = true)
 	{
-		if (snapVolume && _hardMutedByTotalAbsorp) VolumeDb = _TotalAbsorptionMuteDb;
+		if (snapVolume && _hardMutedByTotalAbsorp) VolumeDb = _TOTAL_ABSORP_MUTE_DB;
 		else VolumeDb = targetVolumeDb;
 
 		PanningStrength = targetPanningStrength;
@@ -1465,7 +1465,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	private void UpdateVolumeAttenuation(Node3D listener, float distance)
 	{
 		if (!EnableVolumeAttenuation)
-		{ targetVolumeDb = ApplyExternalVolumeOffset(_baseVolumeDb); return; }
+		{ targetVolumeDb = ApplyExternalVolumeOffset(_baseVolDb); return; }
 
 		if (_lastListenerDistance < 0.0f || MathF.Abs(distance - _lastListenerDistance) >= 0.5f)
 		{
@@ -1491,14 +1491,14 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		_wasInFalloff = inFalloff;
 		_wasAudible = audible;
 
-		if (insideInner) { targetVolumeDb = ApplyExternalVolumeOffset(_baseVolumeDb); return; }
+		if (insideInner) { targetVolumeDb = ApplyExternalVolumeOffset(_baseVolDb); return; }
 		if (distance >= outerRadius) { targetVolumeDb = ApplyExternalVolumeOffset(MinimumVolumeDb); return; }
 
 		float alpha = (distance - InnerRadius) / FalloffDistance;
 		float atten = ApplyAttenuationFunction(alpha);
 
 		float minGain = MathF.Pow(10.0f, MinimumVolumeDb / 20.0f);
-		float baseGain = MathF.Pow(10.0f, _baseVolumeDb / 20.0f);
+		float baseGain = MathF.Pow(10.0f, _baseVolDb / 20.0f);
 		float gain = float.Lerp(minGain, baseGain, atten);
 		gain = MathF.Max(gain, (float)1e-8);
 		targetVolumeDb = ApplyExternalVolumeOffset(20.0f * MathF.Log(gain) / MathF.Log(10.0f));
@@ -1546,11 +1546,11 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			targetAirAbsorpCutoff = float.Lerp(AirAbsorptionCutoffFreqMin, AirAbsorptionCutoffFreqMax, alpha);
 		}
 
-		if (MathF.Abs(targetAirAbsorpCutoff - _lastAirAbsorptionCutoff) > 1.0f)
+		if (MathF.Abs(targetAirAbsorpCutoff - _lastAirAbsorpCutoff) > 1.0f)
 		{
 			EmitSignal(SignalName.AirAbsorptionUpdated, targetAirAbsorpCutoff);
 			EmitSignal(SignalName.AirAbsorptionZoneChanged, targetAirAbsorpCutoff);
-			_lastAirAbsorptionCutoff = targetAirAbsorpCutoff;
+			_lastAirAbsorpCutoff = targetAirAbsorpCutoff;
 		}
 	}
 
@@ -1741,7 +1741,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 		int abCount = 0;
 		bool totalAbHit = false;
-		float abSum = 0.0f, totalAbTrSp = _DefaultTotalAbsorpTransSpeed;
+		float abSum = 0.0f, totalAbTrSp = _DEF_TOTAL_ABSORP_TRANS_SPD;
 
 		float opennessSum = 0.0f;
 
@@ -1797,8 +1797,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		if (totalAbHit)
 		{
 			_activeTotalAbsorpTransSpeed = totalAbTrSp;
-			wetness = MathF.Min(wetness, _TotalAbsorpReverbWetCap);
-			damping = MathF.Max(damping, _TotalAbsorpReverbDampFloor);
+			wetness = MathF.Min(wetness, _TOTAL_ABSORP_REVERB_WET_CAP);
+			damping = MathF.Max(damping, _TOTAL_ABSORP_REVERB_DAMP_FLOOR);
 		}
 
 		float prevRoom = _lastReverbRoomSize, prevWet = _lastReverbWetness, prevDamp = _lastReverbDamping;
@@ -1838,8 +1838,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		{
 			targetLowpassCutoff = OpenLowpassCutoff;
 			lastWallCount = 0;
-			lastWallMaterials.Clear();
-			lastWallAbsorptions.Clear();
+			lastWallMats.Clear();
+			lastWallAbsorps.Clear();
 			if (prevWallCount > 0)
 			{
 				EmitSignal(SignalName.OcclusionChanged, 0, targetLowpassCutoff);
@@ -1888,11 +1888,11 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		float occlHz = OccludedLowpassCutoffMinimum;
 		List<string> wallMats = [];
 		bool totalAbBlkd = false;
-		float totalAbTrSp = _DefaultTotalAbsorpTransSpeed;
+		float totalAbTrSp = _DEF_TOTAL_ABSORP_TRANS_SPD;
 
 		float volRedDb = 0.0f;
 
-		lastWallAbsorptions.Clear();
+		lastWallAbsorps.Clear();
 		for (int i = 0; i < MaxOcclusionHits; i++)
 		{
 			parameters.From = marchPos;
@@ -1937,14 +1937,14 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 			if (abWeighted >= 0.0f)
 			{
-				lastWallAbsorptions.Add(Math.Clamp(abWeighted, 0.0f, 1.0f));
+				lastWallAbsorps.Add(Math.Clamp(abWeighted, 0.0f, 1.0f));
 				float interp = Math.Clamp(abWeighted, 0.0f, 1.0f);
 				float wallCutoff = openHz - interp * (openHz - occlHz);
 				lowCutoff *= wallCutoff / openHz;
 			}
 			else
 			{
-				lastWallAbsorptions.Add(-1.0f);
+				lastWallAbsorps.Add(-1.0f);
 				lowCutoff *= Math.Clamp(tHigh, 0.001f, 1.0f);
 			}
 
@@ -1955,8 +1955,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		}
 
 		lastWallCount = wallCount;
-		lastWallAbsorptions.Clear();
-		lastWallMaterials = wallMats;
+		lastWallAbsorps.Clear();
+		lastWallMats = wallMats;
 
 		if (wallCount != prevWallCount)
 		{
@@ -1971,8 +1971,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		{
 			_hardMutedByTotalAbsorp = true;
 			_activeTotalAbsorpTransSpeed = totalAbTrSp;
-			targetLowpassCutoff = _TotalAbsorptionLowpassHz;
-			targetVolumeDb = _TotalAbsorptionMuteDb;
+			targetLowpassCutoff = _TOTAL_ABSORP_LOW_PASS_HZ;
+			targetVolumeDb = _TOTAL_ABSORP_MUTE_DB;
 			return;
 		}
 
@@ -2034,7 +2034,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private float ApplyExternalVolumeOffset(float volumeValue)
 	{
-		return MathF.Max(volumeValue + _externalVolumeDbOffset, MinimumVolumeDb);
+		return MathF.Max(volumeValue + _extVolDbOffset, MinimumVolumeDb);
 	}
 
 	private void SetPlayInitiated()
@@ -2061,7 +2061,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		reflectionEscaped.Add(false);
 		_rayAbsorptions.Add(0.0f);
 		_rayTotalAbsorption.Add(false);
-		_rayTotalAbTrSpds.Add(_DefaultTotalAbsorpTransSpeed);
+		_rayTotalAbTrSpds.Add(_DEF_TOTAL_ABSORP_TRANS_SPD);
 		_rayMaterialNames.Add("");
 	}
 
@@ -2176,7 +2176,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		_lastReverbRoomSize = targetReverbRoomSize;
 		_lastReverbWetness = targetReverbWetness;
 		_lastReverbDamping = targetReverbDamping;
-		_lastAirAbsorptionCutoff = targetAirAbsorpCutoff;
+		_lastAirAbsorpCutoff = targetAirAbsorpCutoff;
 
 		if (!Engine.IsEditorHint()) return;
 		

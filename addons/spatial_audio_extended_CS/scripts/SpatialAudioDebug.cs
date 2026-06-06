@@ -552,7 +552,7 @@ public partial class SpatialAudioDebug : Node3D
 		if (isOccluded)
 		{
 			string wallsStr = ", ";
-			if (_parentAudioPlayer.lastWallMaterials.Count > 0) wallsStr += _parentAudioPlayer.lastWallMaterials;
+			if (_parentAudioPlayer.lastWallMats.Count > 0) wallsStr += _parentAudioPlayer.lastWallMats;
 			else wallsStr = "";
 
 			text += $"Occluded        YES, by {_parentAudioPlayer.lastWallCount} wall(s) \n";
