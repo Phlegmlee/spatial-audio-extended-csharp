@@ -5,7 +5,7 @@
   - [x] AcousticBody
   - [x] AcousticMaterial
   - [ ] SpatialReflectionNavigationAgent
-  - [ ] SpatialAudioPlayer3D
+  - [x] SpatialAudioPlayer3D
   - [ ] SpatialAudioDebug
   - [x] Preset materials
 - [ ] Example Level
