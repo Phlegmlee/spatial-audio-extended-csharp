@@ -22,6 +22,12 @@ public partial class SpatialAudioDebug : Node3D
 	/// <param name="info">Keys: <c>Distance</c>, <c>VolumeDbTarget</c>, <c>LowpassCutoff</c>, <c>ReverbRoomSize</c>, <c>WallCount</c></param>
 	[Signal] public delegate void SpatialAudioDebugInfoEventHandler(Godot.Collections.Dictionary<string, Variant> info);
 
+	/// <summary>
+	/// Emitted when effects are toggled.
+	/// </summary>
+	/// <param name="enabled">The status of effect toggle.</param>
+	[Signal] public delegate void DebugEffectsToggledEventHandler(bool enabled);
+
 	#endregion
 
 	#region Exports
@@ -112,16 +118,16 @@ public partial class SpatialAudioDebug : Node3D
 		set => _debugToggleShapesKey = value;
 	}
 
-	private bool _effectsEnabled = true;
-	[Export]
-	public bool EffectsEnabled
-	{
-		get => _effectsEnabled;
-		set
-		{
-			_effectsEnabled = value;
-		}
-	}
+	// private bool _effectsEnabled = true;
+	// [Export]
+	// public bool EffectsEnabled
+	// {
+	// 	get => _effectsEnabled;
+	// 	set
+	// 	{
+	// 		_effectsEnabled = value;
+	// 	}
+	// }
 
 	#endregion
 
@@ -243,7 +249,7 @@ public partial class SpatialAudioDebug : Node3D
 		{
 			if (eventKey.Keycode == DebugToggleEffectsKey)
 			{
-				EffectsEnabled = !EffectsEnabled;
+				_parentAudioPlayer.EffectsEnabled = !_parentAudioPlayer.EffectsEnabled;
 				GetViewport().SetInputAsHandled();
 			}
 			else if (eventKey.Keycode == DebugToggleShapesKey)
@@ -627,7 +633,7 @@ public partial class SpatialAudioDebug : Node3D
 		float avgDist = hitSum / Math.Max(hitCount, 1);
 		text += $"Est. Room Size    {avgDist * 2.0f:F2} m  (avg of {hitCount} hits) \n";
 		text += $"Volume      {_parentAudioPlayer.VolumeDb:F2} → {_parentAudioPlayer.targetVolumeDb:F2} \n";
-		text += $"Effects     {EffectsEnabled} \n";
+		text += $"Effects     {_parentAudioPlayer.EffectsEnabled} \n";
 		text += $"Bus         {_parentAudioPlayer.busName}  (idx {_parentAudioPlayer.busIndex}) \n";
 
 		text += $"Press {DebugToggleEffectsKey} to toggle effects | {DebugToggleShapesKey} to toggle shapes \n";
@@ -787,7 +793,7 @@ public partial class SpatialAudioDebug : Node3D
 
 		if (_debugDrawRays || editorSelected) DrawDebugRays();
 
-		bool showRadius = editorSelected || (DebugDrawRadius && EffectsEnabled);
+		bool showRadius = editorSelected || (DebugDrawRadius && _parentAudioPlayer.EffectsEnabled);
 		if (showRadius && _parentAudioPlayer.EnableVolumeAttenuation)
 		{
 			if (_parentAudioPlayer.InnerRadius > 0.0f)

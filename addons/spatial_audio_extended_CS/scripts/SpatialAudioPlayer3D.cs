@@ -1130,6 +1130,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	internal EditorInterface editorInterface = null;
 #endif
 
+	internal bool EffectsEnabled = true;
+
 	#endregion
 
 	#region Internal API
@@ -1525,7 +1527,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	private void UpdateAirAbsorption(Node3D listener, float distance)
 	{
-		if (!EnableAirAbsorption) { targetAirAbsorpCutoff = 20000.0f; return; }
+		if (!EnableAirAbsorption || !EffectsEnabled) { targetAirAbsorpCutoff = 20000.0f; return; }
 
 		if (distance <= AirAbsorptionMinDistance)
 		{ targetAirAbsorpCutoff = AirAbsorptionCutoffFreqMin; return; }
@@ -1725,6 +1727,15 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	{
 		if (reverbEffect == null) return;
 
+		if (!EffectsEnabled)
+		{
+			targetReverbWetness = 0.0f;
+			targetReverbRoomSize = 0.0f;
+			targetReverbDamping = 0.0f;
+			openness = 0.0f;
+			return;
+		}
+
 		if (!RoomSizeReverb)
 		{
 			targetReverbWetness = 0.0f;
@@ -1847,6 +1858,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 			}
 			return;
 		}
+
+		if (!EffectsEnabled){ targetLowpassCutoff = OpenLowpassCutoff; return; }
 
 		if (targetRaycast == null) return;
 
@@ -2144,7 +2157,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	{
 		if (!value) return;
 
-		Node3D AcousticDebugger = new SpatialAudioDebug()
+		SpatialAudioDebug AcousticDebugger = new SpatialAudioDebug()
 		{
 			Name = nameof(AcousticDebugger)
 		};

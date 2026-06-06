@@ -4,6 +4,7 @@
 [ext_resource type="AudioStream" uid="uid://dt8g88e04qhn8" path="res://examples/assets/sounds/alice_01_carroll_128kb.mp3" id="1_oe2cu"]
 [ext_resource type="PackedScene" uid="uid://7njco7xo0xkb" path="res://examples/character/PlayerEntity.tscn" id="4_pw243"]
 [ext_resource type="PackedScene" uid="uid://cw0xah68t6ekg" path="res://examples/objects/speaker.tscn" id="4_w7hkg"]
+[ext_resource type="Script" uid="uid://ckl5ow8qws0hb" path="res://addons/spatial_audio_extended_CS/scripts/SpatialAudioDebug.cs" id="4_xyviw"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_pw243"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -95,7 +96,11 @@ stream = ExtResource("1_oe2cu")
 autoplay = true
 script = ExtResource("1_d2j2t")
 UserAttenuationCurve = SubResource("Curve_oe2cu")
+EnableDebug = true
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
+
+[node name="AcousticDebugger" type="Node3D" parent="U-Wall/SpatialAudioPlayer3D" unique_id=667292338]
+script = ExtResource("4_xyviw")
 
 [node name="PlayerEntity" parent="." unique_id=1865326184 instance=ExtResource("4_pw243")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
