@@ -578,8 +578,6 @@ public partial class SpatialAudioDebug : Node3D
 		text += $"Reverb Room  {curRbRoom:F2} Hz  → {_parentAudioPlayer.targetReverbRoomSize:F2} Hz \n";
 		text += $"Reverb Damp  {curRbDamp:F2} Hz  → {_parentAudioPlayer.targetReverbDamping:F2} Hz \n";
 
-		//text += $"";
-
 		if (_parentAudioPlayer.SurfaceAbsorption)
 		{
 			List<float> validAbs = [];
@@ -678,7 +676,7 @@ public partial class SpatialAudioDebug : Node3D
 				{
 					float absVal = -1.0f;
 					if (i < _parentAudioPlayer.rayAbsorptions.Count) absVal = _parentAudioPlayer.rayAbsorptions[i];
-					if (absVal >= 0.0f) matStr = $"   {_parentAudioPlayer.rayMatNames[i]} (abs: {absVal})";
+					if (absVal >= 0.0f) matStr = $"   {_parentAudioPlayer.rayMatNames[i]} (abs: {absVal:F2})";
 					else matStr = $"  {_parentAudioPlayer.rayMatNames[i]}";
 				}
 
@@ -719,7 +717,13 @@ public partial class SpatialAudioDebug : Node3D
 			}
 			_debugRaysLabel.Text = r;
 		}
-		// TODO: 2269
+		if (_debugRaysExpanded && _debugRaysLabel != null && _debugRaysScroll != null)
+		{
+			float contentH = _debugRaysLabel.GetCombinedMinimumSize().Y;
+			float maxScrollH = 200f;
+			_debugRaysScroll.CustomMinimumSize = _debugRaysScroll.CustomMinimumSize with { Y = MathF.Min(contentH, maxScrollH) };
+			_debugRaysScroll.VerticalScrollMode = ScrollContainer.ScrollMode.Auto;
+		}
 	}
 
 	#endregion

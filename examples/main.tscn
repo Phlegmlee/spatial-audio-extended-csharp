@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" uid="uid://dda61d0ai53jd" path="res://addons/spatial_audio_extended_CS/scripts/SpatialAudioPlayer3D.cs" id="1_d2j2t"]
 [ext_resource type="AudioStream" uid="uid://dt8g88e04qhn8" path="res://examples/assets/sounds/alice_01_carroll_128kb.mp3" id="1_oe2cu"]
+[ext_resource type="Script" uid="uid://2fcswtu60jo2" path="res://addons/spatial_audio_extended_CS/scripts/AcousticBody.cs" id="2_naqvs"]
+[ext_resource type="Resource" uid="uid://63th1rw80rpr" path="res://addons/spatial_audio_extended_CS/materials/brick.tres" id="3_naqvs"]
 [ext_resource type="PackedScene" uid="uid://7njco7xo0xkb" path="res://examples/character/PlayerEntity.tscn" id="4_pw243"]
 [ext_resource type="PackedScene" uid="uid://cw0xah68t6ekg" path="res://examples/objects/speaker.tscn" id="4_w7hkg"]
 [ext_resource type="Script" uid="uid://ckl5ow8qws0hb" path="res://addons/spatial_audio_extended_CS/scripts/SpatialAudioDebug.cs" id="4_xyviw"]
@@ -59,8 +61,6 @@ data = PackedVector3Array(-0.5, -2.5, -4.5, 0, -2.5, -5, -0.5, -2.5, -5, 0, -2.5
 
 [sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_w7hkg"]
 points = PackedVector3Array(-9.015873, -2.5873017, -5.5873017, -0.81032753, 2.6507936, -4.3650794, -0.81032753, 2.6507936, -5.5873017, -9.015873, 2.6507936, -4.3650794, -0.81032753, -2.5873017, -4.3650794, -0.81032753, -2.5873017, -5.5873017, -9.015873, 2.6507936, -5.5873017, -9.015873, -2.5873017, -4.3650794)
-
-[sub_resource type="Curve" id="Curve_oe2cu"]
 
 [sub_resource type="ArrayMesh" id="ArrayMesh_w7hkg"]
 _surfaces = [{
@@ -124,20 +124,30 @@ mesh = SubResource("ArrayMesh_dvvjd")
 [node name="CollisionShape3D2" type="CollisionShape3D" parent="U-Wall/U-Wall2" unique_id=1801330669]
 shape = SubResource("ConvexPolygonShape3D_w7hkg")
 
+[node name="AcousticBody" type="Node" parent="U-Wall/U-Wall2" unique_id=1444255497]
+script = ExtResource("2_naqvs")
+AcousticMaterial = ExtResource("3_naqvs")
+
 [node name="SpatialAudioPlayer3D" type="AudioStreamPlayer3D" parent="U-Wall" unique_id=1620569877]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 0)
 stream = ExtResource("1_oe2cu")
 autoplay = true
 script = ExtResource("1_d2j2t")
-UserAttenuationCurve = SubResource("Curve_oe2cu")
+IgnoreFloor = true
+AttenuationFunction = 4
+EnableAirAbsorption = true
 EnableDebug = true
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
 
 [node name="AcousticDebugger" type="Node3D" parent="U-Wall/SpatialAudioPlayer3D" unique_id=667292338]
 script = ExtResource("4_xyviw")
 
+[node name="AcousticBody" type="Node" parent="U-Wall" unique_id=29445706]
+script = ExtResource("2_naqvs")
+AcousticMaterial = ExtResource("3_naqvs")
+
 [node name="PlayerEntity" parent="." unique_id=1865326184 instance=ExtResource("4_pw243")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 38, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 41, 2, 0)
 
 [node name="JazzBar" type="CSGBox3D" parent="." unique_id=1658483937]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 75, 0, 0)
@@ -182,11 +192,19 @@ transform = Transform3D(0.5, 0.8660253, 3.7855173e-08, 0, -4.371139e-08, 1, 0.86
 stream = ExtResource("6_hjuh8")
 autoplay = true
 script = ExtResource("1_d2j2t")
+RayDistribution = 1
+FibonacciRayCount = 20
+MaxReverbWetness = 0.35
 FalloffDistance = 40.0
 AttenuationFunction = 4
 UserAttenuationCurve = SubResource("Curve_w7hkg")
 EnableAirAbsorption = true
+AirAbsorptionCutoffFreqMax = 5000
+EnableDebug = true
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
+
+[node name="AcousticDebugger" type="Node3D" parent="JazzBar/SpeakerPiano/SpatialAudioPlayer3D" unique_id=197909559]
+script = ExtResource("4_xyviw")
 
 [node name="SpeakerBass" parent="JazzBar" unique_id=439301098 instance=ExtResource("4_w7hkg")]
 transform = Transform3D(0.258819, 0.9659258, 4.222196e-08, 0, -4.371139e-08, 1, 0.9659258, -0.258819, -1.1313338e-08, 19, 4, -6)
@@ -195,10 +213,15 @@ transform = Transform3D(0.258819, 0.9659258, 4.222196e-08, 0, -4.371139e-08, 1, 
 stream = ExtResource("7_5a36c")
 autoplay = true
 script = ExtResource("1_d2j2t")
+RayDistribution = 1
+FibonacciRayCount = 20
+MaxReverbWetness = 0.35
 FalloffDistance = 40.0
 AttenuationFunction = 4
 UserAttenuationCurve = SubResource("Curve_xyviw")
 EnableAirAbsorption = true
+AirAbsorptionCutoffFreqMax = 5000
+SpeedOfSound = 10.0
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
 
 [node name="SpeakerDrums" parent="JazzBar" unique_id=899706798 instance=ExtResource("4_w7hkg")]
@@ -208,10 +231,15 @@ transform = Transform3D(-0.25881907, 0.9659258, 4.222196e-08, 0, -4.371139e-08, 
 stream = ExtResource("8_naqvs")
 autoplay = true
 script = ExtResource("1_d2j2t")
+RayDistribution = 1
+FibonacciRayCount = 20
+MaxReverbWetness = 0.35
 FalloffDistance = 40.0
 AttenuationFunction = 4
 UserAttenuationCurve = SubResource("Curve_plcr4")
 EnableAirAbsorption = true
+AirAbsorptionCutoffFreqMax = 5000
+SpeedOfSound = 10.0
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
 
 [node name="SpeakerGuitar" parent="JazzBar" unique_id=1695485538 instance=ExtResource("4_w7hkg")]
@@ -221,10 +249,15 @@ transform = Transform3D(-4.371139e-08, 1, 4.371139e-08, 0, -4.371139e-08, 1, 1, 
 stream = ExtResource("9_f7sj4")
 autoplay = true
 script = ExtResource("1_d2j2t")
+RayDistribution = 1
+FibonacciRayCount = 20
+MaxReverbWetness = 0.35
 FalloffDistance = 40.0
 AttenuationFunction = 4
 UserAttenuationCurve = SubResource("Curve_avhjo")
 EnableAirAbsorption = true
+AirAbsorptionCutoffFreqMax = 5000
+SpeedOfSound = 10.0
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
 
 [node name="SpeakerSynth" parent="JazzBar" unique_id=310668523 instance=ExtResource("4_w7hkg")]
@@ -234,10 +267,15 @@ transform = Transform3D(-0.50000006, 0.8660254, 3.7855173e-08, 0, -4.371139e-08,
 stream = ExtResource("10_rrq2r")
 autoplay = true
 script = ExtResource("1_d2j2t")
+RayDistribution = 1
+FibonacciRayCount = 20
+MaxReverbWetness = 0.35
 FalloffDistance = 40.0
 AttenuationFunction = 4
 UserAttenuationCurve = SubResource("Curve_03i7d")
 EnableAirAbsorption = true
+AirAbsorptionCutoffFreqMax = 5000
+SpeedOfSound = 10.0
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
 
 [node name="OmniLight3D" type="OmniLight3D" parent="JazzBar" unique_id=459741704]
