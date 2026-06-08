@@ -9,7 +9,31 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 {
 	#region Signals
 
-	// TODO: Signals
+	/// <summary>
+	/// Emitted whenever a path is found or refreshed.
+	/// </summary>
+	/// <param name="worldPath"></param>
+	/// <param name="directPath"></param>
+	[Signal] public delegate void PathUpdatedEventHandler(Vector3[] worldPath, bool directPath);
+
+	/// <summary>
+	/// Emitted when pathing fails while direct line is blocked.
+	/// </summary>
+	/// <param name="worldOrigin"></param>
+	/// <param name="worldTarget"></param>
+	[Signal] public delegate void PathFailedEventHandler(Vector3 worldOrigin, Vector3 worldTarget);
+
+	/// <summary>
+	/// Emitted each frame after proxy position is updated.
+	/// </summary>
+	/// <param name="worldProxy"></param>
+	[Signal] public delegate void AudioProxyPosUpdatedEventHandler(Vector3 worldProxy);
+
+	/// <summary>
+	/// Emitted after graph rebuild completes.
+	/// </summary>
+	/// <param name="pointCount"></param>
+	[Signal] public delegate void GraphRebuiltEventHandler(int pointCount);
 
 	#endregion
 
