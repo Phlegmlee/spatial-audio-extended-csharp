@@ -1,6 +1,8 @@
 using Godot;
 namespace SpatialAudioCS;
 
+// TODO: Examples of usage in docs? Code creation of materials etc.
+
 /// <summary>
 /// Defines how a surface interacts with sound.
 /// <para>Supports defining: </para>

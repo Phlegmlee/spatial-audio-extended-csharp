@@ -2,8 +2,22 @@ using System.Collections.Generic;
 using Godot;
 namespace SpatialAudioCS;
 
+// TODO: Examples of usage in docs?
+
 /// <summary>
-/// TODO: Documentation
+/// Attach as a child to any <c>CollisionObject3D</c> to give the surface 
+/// acoustic properties using an <see cref="SpatialAudioCS.AcousticMaterial"/>.
+/// <para>Supported Parent Nodes:</para>
+/// <list type="bullet">
+/// <item><c>StaticBody3D</c> - static level geometry, walls, floors, props, etc.</item>
+/// <item><c>RigidBody3D</c> - dynamic movable objects.</item>
+/// <item><c>CharacterBody3D</c> - player or npc bodies</item>
+/// <item><c>Area3D</c> - trigger zones / volumes that affect sound, water, fog etc.</item>
+/// <item><c>CSGShape3D</c> - must have collision enabled.</item>
+/// </list>
+/// The AcousticBody must be a direct child of parent node's collison object.
+/// <para> <b>TIP:</b> When a compatable node is selected an editor button 
+/// is created in same location as the button when a mesh is selected.</para>
 /// </summary>
 [Tool, Icon("uid://ces4kkaimtua8"), GlobalClass]
 public partial class AcousticBody : Node
@@ -86,6 +100,7 @@ public partial class AcousticBody : Node
 #if TOOLS
 	#region Editor Configuration
 
+	/// <inheritdoc />
 	public override void _Ready()
 	{
 		if (Engine.IsEditorHint())
@@ -104,6 +119,7 @@ public partial class AcousticBody : Node
 		base._Ready();
 	}
 
+	/// <inheritdoc />
 	public override string[] _GetConfigurationWarnings()
 	{
 		List<string> warnings = [];
