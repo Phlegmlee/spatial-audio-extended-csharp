@@ -2,7 +2,18 @@ using Godot;
 namespace SpatialAudioCS;
 
 /// <summary>
-/// TODO: Documentation
+/// Defines how a surface interacts with sound.
+/// <para>Supports defining: </para>
+/// <c>Absorption</c> - the fraction of sound energy absorbed on reflection. 
+/// Used by reverb and room estimation. 
+/// <para><c>1.0</c> = full absorption (less reverb). <c>0.0</c> = no absorption (full reverb).</para>
+/// <para><c>Scattering</c> - how diffusely the surface reflects sound.</para>
+/// <c>0.0</c> = perfect mirror. <c>1.0</c> = fully diffuse.
+/// <para><c>Transmission</c> - fraction of sound energy that passed through the 
+/// surface. Used by occlusion.</para> 
+/// <c>0.0</c> = fully blocked. <c>1.0</c> = fully transparent.
+/// <para>Material uses three band model for frequency dependent behavior.</para>
+/// <c>Low ≤ 400 Hz</c> <c>Mid = 400-2500 Hz</c> <c>High ≥ 2500 Hz</c>
 /// </summary>
 [Tool, Icon("uid://cnhph2uchj8wu"), GlobalClass]
 public partial class AcousticMaterial : Resource
@@ -13,7 +24,7 @@ public partial class AcousticMaterial : Resource
 
 	private float _absorptionLow = 0.10f;
 	/// <summary>
-	/// Fraction of low-frequency energy absorbed on reflection (<= 400 Hz).
+	/// Fraction of low-frequency energy absorbed on reflection (≤ 400 Hz).
 	/// </summary>
 	[Export(PropertyHint.Range, "0.0f, 1.0f, 0.01f")]
 	public float AbsorptionLow
@@ -35,7 +46,7 @@ public partial class AcousticMaterial : Resource
 
 	private float _absorptionHigh = 0.30f;
 	/// <summary>
-	/// Fraction of high-frequency energy absorbed on reflection (>= 2,500 Hz).
+	/// Fraction of high-frequency energy absorbed on reflection (≥ 2,500 Hz).
 	/// </summary>
 	[Export(PropertyHint.Range, "0.0f, 1.0f, 0.01f")]
 	public float AbsorptionHigh
@@ -62,7 +73,7 @@ public partial class AcousticMaterial : Resource
 
 	private float _transmissionLow = 0.100f;
 	/// <summary>
-	/// Fraction of low-frequency energy that passes through (<= 400 Hz).
+	/// Fraction of low-frequency energy that passes through (≤ 400 Hz).
 	/// <para><c>0.0</c> = fully blocked, <c>1.0</c> = fully transparent.</para>
 	/// </summary>
 	[Export(PropertyHint.Range, "0.0f, 1.0f, 0.001f")]
@@ -86,7 +97,7 @@ public partial class AcousticMaterial : Resource
 
 	private float _transmissionHigh = 0.030f;
 	/// <summary>
-	/// Fraction of high-frequency energy that passes through (>= 2,500 Hz).
+	/// Fraction of high-frequency energy that passes through (≥ 2,500 Hz).
 	/// <para><c>0.0</c> = fully blocked, <c>1.0</c> = fully transparent.</para>
 	/// </summary>
 	[Export(PropertyHint.Range, "0.0f, 1.0f, 0.001f")]
@@ -125,6 +136,10 @@ public partial class AcousticMaterial : Resource
 
 	#region Preset Materials
 
+	/// <summary>
+	/// Generic material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetGeneric()
 	{
 		AcousticMaterial material = new()
@@ -141,6 +156,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 
+	/// <summary>
+	/// Brick material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetBrick()
 	{
 		AcousticMaterial material = new()
@@ -157,6 +176,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 
+	/// <summary>
+	/// Concrete material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetConcrete()
 	{
 		AcousticMaterial material = new()
@@ -173,6 +196,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 
+	/// <summary>
+	/// Ceramic material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetCeramic()
 	{
 		AcousticMaterial material = new()
@@ -189,6 +216,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 
+	/// <summary>
+	/// Gravel material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetGravel()
 	{
 		AcousticMaterial material = new()
@@ -205,6 +236,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 
+	/// <summary>
+	/// Carpet material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetCarpet()
 	{
 		AcousticMaterial material = new()
@@ -221,6 +256,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 
+	/// <summary>
+	/// Glass material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetGlass()
 	{
 		AcousticMaterial material = new()
@@ -237,6 +276,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 
+	/// <summary>
+	/// Plaster material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetPlaster()
 	{
 		AcousticMaterial material = new()
@@ -253,6 +296,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 
+	/// <summary>
+	/// Wood material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetWood()
 	{
 		AcousticMaterial material = new()
@@ -269,6 +316,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 
+	/// <summary>
+	/// Metal material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetMetal()
 	{
 		AcousticMaterial material = new()
@@ -285,6 +336,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 
+	/// <summary>
+	/// Rock material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetRock()
 	{
 		AcousticMaterial material = new()
@@ -301,6 +356,10 @@ public partial class AcousticMaterial : Resource
 		return material;
 	}
 	
+	/// <summary>
+	/// Acoustic foam material preset.
+	/// </summary>
+	/// <returns>A custom material resource.</returns>
 	public static AcousticMaterial PresetAcousticFoam()
 	{
 		AcousticMaterial material = new()
