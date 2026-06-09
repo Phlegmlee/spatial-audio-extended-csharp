@@ -11,8 +11,10 @@
 - [ ] Example Level
   - [ ] Create an example level that tests all functionality and can also be used as a demo.
 - [ ] Documentation
-  - [ ] AcousticBody
-  - [ ] AcousticMaterial
+  - [x] AcousticBody
+    - [ ] Usage examples
+  - [x] AcousticMaterial
+    - [ ] Usage examples
   - [ ] SpatialReflectionNavigationAgent
   - [ ] SpatialAudioPlayer3D
   - [ ] SpatialAudioDebug
