@@ -1,0 +1,121 @@
+[gd_scene format=3 uid="uid://d3oqghpr6j88l"]
+
+[ext_resource type="Script" uid="uid://bvuksg7ke85px" path="res://examples/effects/BigExplosionScene.cs" id="1_5t6fl"]
+[ext_resource type="Material" uid="uid://cxhaa6i7bto07" path="res://examples/effects/ExplosionMaterial.tres" id="1_an4hs"]
+[ext_resource type="AudioStream" uid="uid://c26krdfcm32ec" path="res://examples/assets/sounds/explosion_001.mp3" id="2_5t6fl"]
+[ext_resource type="Script" uid="uid://dda61d0ai53jd" path="res://addons/spatial_audio_extended_CS/scripts/SpatialAudioPlayer3D.cs" id="3_menqm"]
+[ext_resource type="PackedScene" uid="uid://by55hedcjw6li" path="res://examples/3d_gui/3DGUI.tscn" id="5_menqm"]
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_rva4e"]
+angle_max = 1.0
+initial_velocity_min = 0.5
+initial_velocity_max = 1.0
+angular_velocity_max = 10.0
+gravity = Vector3(0, 0, 0)
+linear_accel_min = -1.0
+linear_accel_max = -1.0
+
+[sub_resource type="QuadMesh" id="QuadMesh_16uck"]
+
+[sub_resource type="Curve" id="Curve_hkej2"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5t6fl"]
+albedo_color = Color(1, 0.36078432, 0, 1)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_5t6fl"]
+height = 1.0
+radius = 1.0
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_menqm"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lg058"]
+resource_local_to_scene = true
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 0.752941)
+albedo_texture = SubResource("ViewportTexture_menqm")
+
+[node name="BigExplosion" type="Node3D" unique_id=991039000 node_paths=PackedStringArray("bombButton", "gui", "explosion", "esfx")]
+script = ExtResource("1_5t6fl")
+bombButton = NodePath("Button/Area3D")
+gui = NodePath("Button/3D_GUI")
+explosion = NodePath("Explosion1")
+esfx = NodePath("SpatialAudioPlayer3D")
+
+[node name="Explosion1" type="GPUParticles3D" parent="." unique_id=1420233855]
+material_override = ExtResource("1_an4hs")
+emitting = false
+amount = 20
+lifetime = 3.0
+one_shot = true
+explosiveness = 0.91
+randomness = 0.84
+fixed_fps = 60
+visibility_aabb = AABB(-4, -4, -4.79199, 8, 8, 8)
+process_material = SubResource("ParticleProcessMaterial_rva4e")
+draw_pass_1 = SubResource("QuadMesh_16uck")
+
+[node name="SpatialAudioPlayer3D" type="AudioStreamPlayer3D" parent="." unique_id=642931939]
+stream = ExtResource("2_5t6fl")
+max_distance = 500.0
+script = ExtResource("3_menqm")
+MaxRaycastDistance = 100.0
+FalloffDistance = 75.0
+UserAttenuationCurve = SubResource("Curve_hkej2")
+EnableAirAbsorption = true
+EnableSoundDelay = true
+metadata/_custom_type_script = "uid://dda61d0ai53jd"
+
+[node name="Button" type="CSGBox3D" parent="." unique_id=436692573]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+size = Vector3(0.25, 0.5, 0.25)
+material = SubResource("StandardMaterial3D_5t6fl")
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="Button" unique_id=125967005]
+transform = Transform3D(0.8660254, 0.5, 0, -0.5, 0.8660254, 0, 0, 0, 1, 0.15145898, 0.22316319, 0)
+radius = 0.1
+height = 0.125
+
+[node name="CSGBox3D" type="CSGBox3D" parent="Button" unique_id=975588690]
+transform = Transform3D(0.49999997, -0.86602545, 0, 0.86602545, 0.49999997, 0, 0, 0, 1, 0.059039354, 0.21951789, 0)
+size = Vector3(0.12432861, 0.44267273, 1)
+
+[node name="Area3D" type="Area3D" parent="Button" unique_id=912533193]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Button/Area3D" unique_id=811500542]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("CylinderShape3D_5t6fl")
+
+[node name="3D_GUI" parent="Button" unique_id=1504556421 instance=ExtResource("5_menqm")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -0.2742436, 1, 0)
+visible = false
+
+[node name="Control" type="Control" parent="Button/3D_GUI/SubViewport" parent_id_path=PackedInt32Array(1504556421, 220837146) index="0" unique_id=1311860301]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="Button/3D_GUI/SubViewport/Control" unique_id=84981786]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -85.5
+offset_top = -34.5
+offset_right = 85.5
+offset_bottom = 34.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 50
+text = "Press E"
+
+[node name="quad" parent="Button/3D_GUI" index="1" unique_id=1505330341]
+surface_material_override/0 = SubResource("StandardMaterial3D_lg058")
+
+[editable path="Button/3D_GUI"]

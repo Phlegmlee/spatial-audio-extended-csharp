@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://by55hedcjw6li"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_5rcxf"]
+
+[sub_resource type="ViewportTexture" id="ViewportTexture_5rcxf"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_0ixpx"]
+resource_local_to_scene = true
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 0.752941)
+albedo_texture = SubResource("ViewportTexture_5rcxf")
+
+[sub_resource type="ConvexPolygonShape3D" id="ConvexPolygonShape3D_5rcxf"]
+points = PackedVector3Array(0.5, 0.5, 0, 0.5, -0.5, 0, -0.5, 0.5, 0, -0.5, -0.5, 0)
+
+[node name="3D_GUI" type="Node3D" unique_id=1504556421]
+
+[node name="SubViewport" type="SubViewport" parent="." unique_id=220837146]
+gui_embed_subwindows = true
+
+[node name="quad" type="MeshInstance3D" parent="." unique_id=1505330341]
+mesh = SubResource("QuadMesh_5rcxf")
+surface_material_override/0 = SubResource("StandardMaterial3D_0ixpx")
+
+[node name="Area3D" type="Area3D" parent="quad" unique_id=710466183]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="quad/Area3D" unique_id=719086864]
+shape = SubResource("ConvexPolygonShape3D_5rcxf")

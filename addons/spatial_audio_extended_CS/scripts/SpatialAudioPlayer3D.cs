@@ -34,7 +34,8 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	/// Designed as an override to <see cref="AudioStreamPlayer3D.Play"/>.
 	/// <para>When <see cref="EnableSoundDelay"/> is on, playback is delayed based on 
 	/// listener distance and <see cref="SpeedOfSound"/></para>
-	/// When <see cref="EnableSoundDelay"/>
+	/// When <see cref="EnableSoundDelay"/> is off, sound is played the same is if
+	/// just <c>.Play()</c> was called.
 	/// </summary>
 	/// <param name="fromPosition">Position in seconds to start playing.</param>
 	public void PlayWithDelay(float fromPosition = 0.0f)
