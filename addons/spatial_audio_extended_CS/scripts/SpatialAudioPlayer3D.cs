@@ -4,7 +4,26 @@ using Godot;
 namespace SpatialAudioCS;
 
 /// <summary>
-/// TODO: Documentation
+/// An advanced, drop-in relacement for Godot's <see cref="AudioStreamPlayer3D"/> that provides
+/// physically-inspired, real-time spatial audio effects for immersive 3D applications.
+/// <para> <b>Usage:</b> </para>
+/// <list type="number">
+/// <item>Add this node in place of an AudioStreamPlayer3D for any 3D sound that needs advanced spatialization.</item>
+/// <item>Configue <c>attenuation</c>, <c>reverb</c>, <c>occlusion</c> and <c>debug</c> via the inspector.</item>
+/// <item>Connect to signals for gameplay, analytics, or UI feedback on audio events.</item>
+/// <para> <b>Key Inherited Parameters:</b> </para>
+/// </list>
+/// <list type="bullet">
+/// <item><see cref="AudioStreamPlayer3D.VolumeDb"/>: 
+/// managed internally, editing it directly has no effect.</item>
+/// <item><see cref="AudioStreamPlayer3D.MaxDb"/>: 
+/// controls the maximum loudness of the stream.</item>
+/// <item><see cref="AudioStreamPlayer3D.UnitSize"/>: 
+/// the radius at which the sound plays at full volume.</item>
+/// <item><see cref="AudioStreamPlayer3D.MaxDistance"/>: 
+/// the furthest distance at which the sound is audible.
+/// Should be equal to, or greater than <see cref="MaxRaycastDistance"/>.</item>
+/// </list>
 /// </summary>
 [Tool, Icon("uid://diaqpjedywsus"), GlobalClass]
 public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
@@ -582,7 +601,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 	/// How strongly walls reduce volume (in addition to <see cref="AudioEffectLowPassFilter"/>).
 	/// <para><c>0.0</c> = no volume reduction at all, only filtering.</para>
 	/// <c>1.0</c> = full physically-derived dB loss per wall.
-	/// <para>Values around <c>0.3</c>-<c>0.5</c> sound natural for most games.
+	/// <para>Values around <c>0.3</c>-<c>0.5</c> sound natural for most games.</para>
 	/// </summary>
 	[Export(PropertyHint.Range, "0.0f, 1.0f, 0.01f")]
 	public float OcclusionVolumeStrength
@@ -1341,6 +1360,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 
 	#region Physics Process
 
+	/// <inheritdoc />
 	public override void _PhysicsProcess(double delta)
 	{
 		if (!_setupComplete) return;
@@ -2170,6 +2190,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 #if TOOLS
 	#region Editor Config
 
+	/// <inheritdoc />
 	public override void _EnterTree()
 	{
 		EnableDebugToggled += OnEnableDebugToggled;
@@ -2196,6 +2217,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 		editorInterface = EditorInterface.Singleton;
 	}
 
+	/// <inheritdoc />
 	public override void _ExitTree()
 	{
 		EnableDebugToggled -= OnEnableDebugToggled;
