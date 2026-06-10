@@ -16,6 +16,7 @@ linear_accel_min = -1.0
 linear_accel_max = -1.0
 
 [sub_resource type="QuadMesh" id="QuadMesh_16uck"]
+size = Vector2(250, 250)
 
 [sub_resource type="Curve" id="Curve_hkej2"]
 
@@ -46,13 +47,13 @@ esfx = NodePath("SpatialAudioPlayer3D")
 [node name="Explosion1" type="GPUParticles3D" parent="." unique_id=1420233855]
 material_override = ExtResource("1_an4hs")
 emitting = false
-amount = 20
+amount = 100
 lifetime = 3.0
 one_shot = true
 explosiveness = 0.91
 randomness = 0.84
 fixed_fps = 60
-visibility_aabb = AABB(-4, -4, -4.79199, 8, 8, 8)
+visibility_aabb = AABB(-1000, -1000, -1000, 2000, 2000, 2000)
 process_material = SubResource("ParticleProcessMaterial_rva4e")
 draw_pass_1 = SubResource("QuadMesh_16uck")
 
@@ -65,6 +66,7 @@ FalloffDistance = 75.0
 UserAttenuationCurve = SubResource("Curve_hkej2")
 EnableAirAbsorption = true
 EnableSoundDelay = true
+SpeedOfSound = 25.0
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
 
 [node name="Button" type="CSGBox3D" parent="." unique_id=436692573]
@@ -112,8 +114,15 @@ offset_right = 85.5
 offset_bottom = 34.5
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 50
-text = "Press E"
+theme_override_font_sizes/font_size = 25
+text = "Sound Speed Delay Example
+Speed of sound set to 25m/s
+The speed of sound in normal 
+atmospheric conditions is 343 m/s
+
+Press E to explode"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="quad" parent="Button/3D_GUI" index="1" unique_id=1505330341]
 surface_material_override/0 = SubResource("StandardMaterial3D_lg058")

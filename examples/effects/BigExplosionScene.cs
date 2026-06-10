@@ -23,7 +23,7 @@ public partial class BigExplosionScene : Node3D
 
 		if (Input.IsActionJustPressed("interact"))
 		{
-			explosion.Emitting = true;
+			explosion.Restart();
 			esfx.PlayWithDelay();
 		}
 	}

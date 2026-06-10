@@ -121,22 +121,17 @@ shape = SubResource("BoxShape3D_aqi44")
 mesh = SubResource("ArrayMesh_oe2cu")
 
 [node name="BigExplosion" parent="FloorBody2" unique_id=991039000 instance=ExtResource("1_f7sj4")]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 6, 0)
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 0.75705206, -55)
 
 [node name="Explosion1" parent="FloorBody2/BigExplosion" index="0" unique_id=1420233855]
-emitting = true
-one_shot = false
-visibility_aabb = AABB(-3.71, -3.05, -6.042, 18.965, 8.645, 13.4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -52, 1, -2.2729923e-06)
 
-[node name="SpatialAudioPlayer3D" parent="FloorBody2/BigExplosion" index="2" unique_id=642931939]
-max_distance = 200.0
-MaxRaycastDistance = 175.0
+[node name="SpatialAudioPlayer3D" parent="FloorBody2/BigExplosion" index="1" unique_id=642931939]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -52, 1, -2.2729923e-06)
+max_distance = 75.0
+MaxRaycastDistance = 75.0
 IgnoreFloor = true
 FalloffDistance = 250.0
-SpeedOfSound = 100.0
-
-[node name="Button" parent="FloorBody2/BigExplosion" index="3" unique_id=436692573]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57, -5.255526, 2.4041258e-06)
 
 [node name="quad" parent="FloorBody2/BigExplosion/Button/3D_GUI" parent_id_path=PackedInt32Array(991039000, 1504556421) index="1" unique_id=1505330341]
 surface_material_override/0 = SubResource("StandardMaterial3D_rrq2r")
@@ -185,7 +180,7 @@ script = ExtResource("2_naqvs")
 AcousticMaterial = ExtResource("3_naqvs")
 
 [node name="PlayerEntity" parent="." unique_id=1865326184 instance=ExtResource("4_pw243")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 36)
 
 [node name="JazzBar" type="CSGBox3D" parent="." unique_id=1658483937]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 75, 0, 0)
