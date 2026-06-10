@@ -37,22 +37,6 @@ public class SpatialReflectionNavigationAgent3D : Node3D
 | enum [ScanNeighborModeEnum](SpatialReflectionNavigationAgent3D.ScanNeighborModeEnum.md) | Options for neighbor connectivity for reachable scan. |
 | class [SignalName](SpatialReflectionNavigationAgent3D.SignalName.md) | Cached StringNames for the signals contained in this class, for fast lookup. |
 
-## Protected Members
-
-| name | description |
-| --- | --- |
-| [EmitSignalAudioProxyPosUpdated](SpatialReflectionNavigationAgent3D/EmitSignalAudioProxyPosUpdated.md)(…) |  |
-| [EmitSignalGraphRebuilt](SpatialReflectionNavigationAgent3D/EmitSignalGraphRebuilt.md)(…) |  |
-| [EmitSignalPathFailed](SpatialReflectionNavigationAgent3D/EmitSignalPathFailed.md)(…) |  |
-| [EmitSignalPathUpdated](SpatialReflectionNavigationAgent3D/EmitSignalPathUpdated.md)(…) |  |
-| override [GetGodotClassPropertyValue](SpatialReflectionNavigationAgent3D/GetGodotClassPropertyValue.md)(…) |  |
-| override [HasGodotClassMethod](SpatialReflectionNavigationAgent3D/HasGodotClassMethod.md)(…) |  |
-| override [HasGodotClassSignal](SpatialReflectionNavigationAgent3D/HasGodotClassSignal.md)(…) |  |
-| override [InvokeGodotClassMethod](SpatialReflectionNavigationAgent3D/InvokeGodotClassMethod.md)(…) |  |
-| override [RaiseGodotClassSignalCallbacks](SpatialReflectionNavigationAgent3D/RaiseGodotClassSignalCallbacks.md)(…) |  |
-| override [RestoreGodotObjectData](SpatialReflectionNavigationAgent3D/RestoreGodotObjectData.md)(…) |  |
-| override [SaveGodotObjectData](SpatialReflectionNavigationAgent3D/SaveGodotObjectData.md)(…) |  |
-| override [SetGodotClassPropertyValue](SpatialReflectionNavigationAgent3D/SetGodotClassPropertyValue.md)(…) |  |
 
 ## See Also
 
