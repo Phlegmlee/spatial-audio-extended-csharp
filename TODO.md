@@ -16,9 +16,9 @@
   - [x] AcousticMaterial
     - [ ] Usage examples
   - [ ] SpatialReflectionNavigationAgent
-  - [ ] SpatialAudioPlayer3D
-  - [ ] SpatialAudioDebug
-  - [ ] Preset materials
+  - [x] SpatialAudioPlayer3D
+  - [x] SpatialAudioDebug
+  - [x] Preset materials
 
 ## MODERATE:
 
