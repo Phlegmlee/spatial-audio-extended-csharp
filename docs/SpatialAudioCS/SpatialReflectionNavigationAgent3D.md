@@ -1,0 +1,61 @@
+# SpatialReflectionNavigationAgent3D class
+
+TODO: Documentation
+
+```csharp
+public class SpatialReflectionNavigationAgent3D : Node3D
+```
+
+## Public Members
+
+| name | description |
+| --- | --- |
+| [SpatialReflectionNavigationAgent3D](SpatialReflectionNavigationAgent3D/SpatialReflectionNavigationAgent3D.md)() | The default constructor. |
+| [DistanceMode](SpatialReflectionNavigationAgent3D/DistanceMode.md) { get; set; } |  |
+| [NavigationProfile](SpatialReflectionNavigationAgent3D/NavigationProfile.md) { get; set; } | High-level tuning preset for graph generation. |
+| [NavigationRadius](SpatialReflectionNavigationAgent3D/NavigationRadius.md) { get; set; } |  |
+| [OriginMode](SpatialReflectionNavigationAgent3D/OriginMode.md) { get; set; } |  |
+| [RecomputeOriginThreshold](SpatialReflectionNavigationAgent3D/RecomputeOriginThreshold.md) { get; set; } |  |
+| [RecomputeTargetThreshold](SpatialReflectionNavigationAgent3D/RecomputeTargetThreshold.md) { get; set; } |  |
+| [ScanNeighborMode](SpatialReflectionNavigationAgent3D/ScanNeighborMode.md) { get; set; } |  |
+| [SkipRecomputeWhenStatic](SpatialReflectionNavigationAgent3D/SkipRecomputeWhenStatic.md) { get; set; } | Skip full path solve when orgin and listener moved less than the configured thresholds. |
+| [StaticRecomputeInterval](SpatialReflectionNavigationAgent3D/StaticRecomputeInterval.md) { get; set; } |  |
+| [UpdateInterval](SpatialReflectionNavigationAgent3D/UpdateInterval.md) { get; set; } | Recompute interval (in seconds) for the path query. |
+| event [AudioProxyPosUpdated](SpatialReflectionNavigationAgent3D/AudioProxyPosUpdated.md) |  |
+| event [GraphRebuilt](SpatialReflectionNavigationAgent3D/GraphRebuilt.md) |  |
+| event [PathFailed](SpatialReflectionNavigationAgent3D/PathFailed.md) |  |
+| event [PathUpdated](SpatialReflectionNavigationAgent3D/PathUpdated.md) |  |
+| delegate [AudioProxyPosUpdatedEventHandler](SpatialReflectionNavigationAgent3D.AudioProxyPosUpdatedEventHandler.md) | Emitted each frame after proxy position is updated. |
+| enum [DistanceModeEnum](SpatialReflectionNavigationAgent3D.DistanceModeEnum.md) | Options for distance function used for movement and heuristic. |
+| delegate [GraphRebuiltEventHandler](SpatialReflectionNavigationAgent3D.GraphRebuiltEventHandler.md) | Emitted after graph rebuild completes. |
+| class [MethodName](SpatialReflectionNavigationAgent3D.MethodName.md) | Cached StringNames for the methods contained in this class, for fast lookup. |
+| enum [NavigationProfileEnum](SpatialReflectionNavigationAgent3D.NavigationProfileEnum.md) | Options for High-level tuning preset for graph generation. |
+| enum [OriginModeEnum](SpatialReflectionNavigationAgent3D.OriginModeEnum.md) | Options for where the path starts from. |
+| delegate [PathFailedEventHandler](SpatialReflectionNavigationAgent3D.PathFailedEventHandler.md) | Emitted when pathing fails while direct line is blocked. |
+| delegate [PathUpdatedEventHandler](SpatialReflectionNavigationAgent3D.PathUpdatedEventHandler.md) | Emitted whenever a path is found or refreshed. |
+| class [PropertyName](SpatialReflectionNavigationAgent3D.PropertyName.md) | Cached StringNames for the properties and fields contained in this class, for fast lookup. |
+| enum [ScanNeighborModeEnum](SpatialReflectionNavigationAgent3D.ScanNeighborModeEnum.md) | Options for neighbor connectivity for reachable scan. |
+| class [SignalName](SpatialReflectionNavigationAgent3D.SignalName.md) | Cached StringNames for the signals contained in this class, for fast lookup. |
+
+## Protected Members
+
+| name | description |
+| --- | --- |
+| [EmitSignalAudioProxyPosUpdated](SpatialReflectionNavigationAgent3D/EmitSignalAudioProxyPosUpdated.md)(…) |  |
+| [EmitSignalGraphRebuilt](SpatialReflectionNavigationAgent3D/EmitSignalGraphRebuilt.md)(…) |  |
+| [EmitSignalPathFailed](SpatialReflectionNavigationAgent3D/EmitSignalPathFailed.md)(…) |  |
+| [EmitSignalPathUpdated](SpatialReflectionNavigationAgent3D/EmitSignalPathUpdated.md)(…) |  |
+| override [GetGodotClassPropertyValue](SpatialReflectionNavigationAgent3D/GetGodotClassPropertyValue.md)(…) |  |
+| override [HasGodotClassMethod](SpatialReflectionNavigationAgent3D/HasGodotClassMethod.md)(…) |  |
+| override [HasGodotClassSignal](SpatialReflectionNavigationAgent3D/HasGodotClassSignal.md)(…) |  |
+| override [InvokeGodotClassMethod](SpatialReflectionNavigationAgent3D/InvokeGodotClassMethod.md)(…) |  |
+| override [RaiseGodotClassSignalCallbacks](SpatialReflectionNavigationAgent3D/RaiseGodotClassSignalCallbacks.md)(…) |  |
+| override [RestoreGodotObjectData](SpatialReflectionNavigationAgent3D/RestoreGodotObjectData.md)(…) |  |
+| override [SaveGodotObjectData](SpatialReflectionNavigationAgent3D/SaveGodotObjectData.md)(…) |  |
+| override [SetGodotClassPropertyValue](SpatialReflectionNavigationAgent3D/SetGodotClassPropertyValue.md)(…) |  |
+
+## See Also
+
+* namespace [SpatialAudioCS](../spatial-audio-extended-csharp.md)
+
+<!-- DO NOT EDIT: generated by xmldocmd for spatial-audio-extended-csharp.dll -->

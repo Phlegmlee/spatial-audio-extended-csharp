@@ -11,8 +11,8 @@ namespace SpatialAudioCS;
 /// <item>Add this node in place of an AudioStreamPlayer3D for any 3D sound that needs advanced spatialization.</item>
 /// <item>Configue <c>attenuation</c>, <c>reverb</c>, <c>occlusion</c> and <c>debug</c> via the inspector.</item>
 /// <item>Connect to signals for gameplay, analytics, or UI feedback on audio events.</item>
-/// <para> <b>Key Inherited Parameters:</b> </para>
 /// </list>
+/// <para> <b>Key Inherited Parameters:</b> </para>
 /// <list type="bullet">
 /// <item><see cref="AudioStreamPlayer3D.VolumeDb"/>: 
 /// managed internally, editing it directly has no effect.</item>
