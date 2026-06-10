@@ -4,6 +4,11 @@ using System.Collections.Generic;
 using Godot;
 namespace SpatialAudioCS;
 
+/// <summary>
+/// This class is used to debug a <see cref="SpatialAudioPlayer3D"/>. 
+/// A debug child will be automatically added when <see cref="SpatialAudioPlayer3D.EnableDebug"/>
+/// is toggled.
+/// </summary>
 [Tool, Icon("uid://c0vs0tbtijiaf")]
 public partial class SpatialAudioDebug : Node3D
 {
@@ -13,20 +18,20 @@ public partial class SpatialAudioDebug : Node3D
 	/// Emitted when the debug overlay visibility is toggled.
 	/// </summary>
 	/// <param name="visible"></param>
-	[Signal] public delegate void DebugOverlayToggledEventHandler(bool visible);
+	[Signal] private delegate void DebugOverlayToggledEventHandler(bool visible);
 
 	/// <summary>
 	/// Emits a compact diagnostics dictionary when the debug overlay is shown.
 	/// <para>Keys: <c>Distance</c>, <c>VolumeDbTarget</c>, <c>LowpassCutoff</c>, <c>ReverbRoomSize</c>, <c>WallCount</c></para>
 	/// </summary>
 	/// <param name="info">Keys: <c>Distance</c>, <c>VolumeDbTarget</c>, <c>LowpassCutoff</c>, <c>ReverbRoomSize</c>, <c>WallCount</c></param>
-	[Signal] public delegate void SpatialAudioDebugInfoEventHandler(Godot.Collections.Dictionary<string, Variant> info);
+	[Signal] private delegate void SpatialAudioDebugInfoEventHandler(Godot.Collections.Dictionary<string, Variant> info);
 
 	/// <summary>
 	/// Emitted when effects are toggled.
 	/// </summary>
 	/// <param name="enabled">The status of effect toggle.</param>
-	[Signal] public delegate void DebugEffectsToggledEventHandler(bool enabled);
+	[Signal] private delegate void DebugEffectsToggledEventHandler(bool enabled);
 
 	#endregion
 
@@ -203,6 +208,7 @@ public partial class SpatialAudioDebug : Node3D
 		_parentAudioPlayer = GetParent() as SpatialAudioPlayer3D;
 	}
 
+	/// <inheritdoc />
 	public override void _Process(double delta)
 	{
 		bool editorSelected = IsEditorSelected();
@@ -219,7 +225,7 @@ public partial class SpatialAudioDebug : Node3D
 			float outer = _parentAudioPlayer.InnerRadius + _parentAudioPlayer.FalloffDistance;
 			bool inRange = !_parentAudioPlayer.EnableVolumeAttenuation || dist <= outer;
 
-			if (inRange && listener!= null) PrintDebug(listener);
+			if (inRange && listener != null) PrintDebug(listener);
 			else
 			{
 				if (_debugPanel != null) _debugPanel.Visible = false;
@@ -1136,6 +1142,7 @@ public partial class SpatialAudioDebug : Node3D
 		if (DebugDrawRays || DebugDrawRadius || DebugDrawPlayingState) SetupDebugMesh();
 	}
 
+	/// <inheritdoc />
 	public override void _ValidateProperty(Godot.Collections.Dictionary property)
 	{
 		List<StringName> debugProperties =
