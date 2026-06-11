@@ -43,16 +43,6 @@ _surfaces = [{
 "vertex_data": PackedByteArray("AABIwgAAAL8AAEhCAABIwgAAAL8AAEjCAABIwgAAAD8AAEjCAABIQgAAAL8AAEjCAABIwgAAAL8AAEjCAABIwgAAAL8AAEhCAABIwgAAAD8AAEjCAABIwgAAAL8AAEjCAABIQgAAAL8AAEjCAABIwgAAAD8AAEjCAABIwgAAAD8AAEhCAABIwgAAAL8AAEhCAABIwgAAAL8AAEhCAABIwgAAAD8AAEhCAABIQgAAAD8AAEhCAABIQgAAAD8AAEhCAABIwgAAAD8AAEhCAABIwgAAAD8AAEjCAABIwgAAAL8AAEhCAABIQgAAAL8AAEhCAABIQgAAAL8AAEjCAABIQgAAAD8AAEhCAABIQgAAAL8AAEhCAABIwgAAAL8AAEhCAABIQgAAAL8AAEjCAABIQgAAAL8AAEhCAABIQgAAAD8AAEhCAABIQgAAAL8AAEjCAABIQgAAAD8AAEjCAABIwgAAAD8AAEjCAABIwgAAAD8AAEjCAABIQgAAAD8AAEjCAABIQgAAAD8AAEhCAABIQgAAAD8AAEhCAABIQgAAAD8AAEjCAABIQgAAAL8AAEjCAAD/f/9//n8AAP9//3/+fwAA/3//f/5//38AAP//AAD/fwAA//8AAP9/AAD//wAA/////wAA/z//////AAD/P/////8AAP8/AAD/f/9//n8AAP9//3/+fwAA/3//f/5//3//fwAA/z//f/9/AAD/P/9//38AAP8//3//////AAD/f/////8AAP9//////wAA/38AAP//AAD/fwAA//8AAP9/AAD//wAA/3//fwAA/z//f/9/AAD/P/9//38AAP8/////f/9//n////9//3/+f////3//f/5//////wAA/z//////AAD/P/////8AAP8//3//////AAD/f/////8AAP9//////wAA////f/9//n////9//3/+f////3//f/5/")
 }]
 
-[sub_resource type="ViewportTexture" id="ViewportTexture_f7sj4"]
-viewport_path = NodePath("SubViewport")
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rrq2r"]
-resource_local_to_scene = true
-transparency = 1
-shading_mode = 0
-albedo_color = Color(1, 1, 1, 0.752941)
-albedo_texture = SubResource("ViewportTexture_f7sj4")
-
 [sub_resource type="ArrayMesh" id="ArrayMesh_dvvjd"]
 _surfaces = [{
 "aabb": AABB(-10.5, -2.5, -5.5, 11, 5, 10.5),
@@ -94,6 +84,16 @@ data = PackedVector3Array(-0.5, -6, -24.5, -0.5, -5.5, -1.25, -0.5, -6, 24.5, -0
 
 [sub_resource type="Curve" id="Curve_03i7d"]
 
+[sub_resource type="ViewportTexture" id="ViewportTexture_f7sj4"]
+viewport_path = NodePath("SubViewport")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rrq2r"]
+resource_local_to_scene = true
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 0.752941)
+albedo_texture = SubResource("ViewportTexture_f7sj4")
+
 [node name="Main" type="Node3D" unique_id=910781270]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=550944832]
@@ -103,6 +103,9 @@ environment = SubResource("Environment_xyviw")
 transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
 shadow_enabled = true
 
+[node name="PlayerEntity" parent="." unique_id=1865326184 instance=ExtResource("4_pw243")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 36)
+
 [node name="FloorBody" type="StaticBody3D" parent="." unique_id=1474844503]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="FloorBody" unique_id=1283649557]
@@ -111,33 +114,8 @@ shape = SubResource("BoxShape3D_aqi44")
 [node name="Floor" type="MeshInstance3D" parent="FloorBody" unique_id=637444169]
 mesh = SubResource("ArrayMesh_oe2cu")
 
-[node name="FloorBody2" type="StaticBody3D" parent="." unique_id=1844247150]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 103)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="FloorBody2" unique_id=1437568856]
-shape = SubResource("BoxShape3D_aqi44")
-
-[node name="Floor" type="MeshInstance3D" parent="FloorBody2" unique_id=1634414537]
-mesh = SubResource("ArrayMesh_oe2cu")
-
-[node name="BigExplosion" parent="FloorBody2" unique_id=991039000 instance=ExtResource("1_f7sj4")]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 0.75705206, -55)
-
-[node name="Explosion1" parent="FloorBody2/BigExplosion" index="0" unique_id=1420233855]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -52, 1, -2.2729923e-06)
-
-[node name="SpatialAudioPlayer3D" parent="FloorBody2/BigExplosion" index="1" unique_id=642931939]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -52, 1, -2.2729923e-06)
-max_distance = 75.0
-MaxRaycastDistance = 75.0
-IgnoreFloor = true
-FalloffDistance = 250.0
-
-[node name="quad" parent="FloorBody2/BigExplosion/Button/3D_GUI" parent_id_path=PackedInt32Array(991039000, 1504556421) index="1" unique_id=1505330341]
-surface_material_override/0 = SubResource("StandardMaterial3D_rrq2r")
-
 [node name="U-Wall" type="StaticBody3D" parent="." unique_id=1011145271]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 3, 0)
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -38, 3, -4)
 
 [node name="U-Wall_mesh" type="MeshInstance3D" parent="U-Wall" unique_id=46255232]
 mesh = SubResource("ArrayMesh_dvvjd")
@@ -178,9 +156,6 @@ script = ExtResource("4_xyviw")
 [node name="AcousticBody" type="Node" parent="U-Wall" unique_id=29445706]
 script = ExtResource("2_naqvs")
 AcousticMaterial = ExtResource("3_naqvs")
-
-[node name="PlayerEntity" parent="." unique_id=1865326184 instance=ExtResource("4_pw243")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 36)
 
 [node name="JazzBar" type="CSGBox3D" parent="." unique_id=1658483937]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 75, 0, 0)
@@ -316,5 +291,20 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
 light_color = Color(0.99999994, 0.95423526, 0.8492057, 1)
 omni_range = 11.0
 
-[editable path="FloorBody2/BigExplosion"]
-[editable path="FloorBody2/BigExplosion/Button/3D_GUI"]
+[node name="BigExplosion" parent="." unique_id=991039000 instance=ExtResource("1_f7sj4")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 0, 0.75705206, 48)
+
+[node name="Explosion1" parent="BigExplosion" index="0" unique_id=1420233855]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -52, 1, -2.2729923e-06)
+
+[node name="SpatialAudioPlayer3D" parent="BigExplosion" index="1" unique_id=642931939]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -52, 1, -2.2729923e-06)
+max_distance = 75.0
+MaxRaycastDistance = 75.0
+IgnoreFloor = true
+
+[node name="quad" parent="BigExplosion/Button/3D_GUI" parent_id_path=PackedInt32Array(991039000, 1504556421) index="1" unique_id=1505330341]
+surface_material_override/0 = SubResource("StandardMaterial3D_rrq2r")
+
+[editable path="BigExplosion"]
+[editable path="BigExplosion/Button/3D_GUI"]

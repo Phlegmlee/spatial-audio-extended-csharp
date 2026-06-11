@@ -6,8 +6,11 @@ public partial class PlayerEntity : CharacterBody3D
 	private Vector2 MouseInput = new();
 	private float _mouseSens = 0.1f;
 
-	public const float Speed = 5.0f;
-	public const float JumpVelocity = 4.5f;
+	private float MoveSpeed = Speed;
+
+	private const float Speed = 5.0f;
+	private const float SprintSpeed = 20.0f;
+	private const float JumpVelocity = 4.5f;
 
 	public override void _PhysicsProcess(double delta)
 	{
@@ -46,9 +49,11 @@ public partial class PlayerEntity : CharacterBody3D
 		Vector3 direction = (Transform.Basis * new Vector3(inputDir.X, 0, inputDir.Y)).Normalized();
 		if (direction != Vector3.Zero)
 		{
-			velocity.X = direction.X * Speed;
-			velocity.Z = direction.Z * Speed;
-		}
+			if (Input.IsActionPressed("sprint")) MoveSpeed = SprintSpeed;
+			else MoveSpeed = Speed;
+			velocity.X = direction.X * MoveSpeed;
+			velocity.Z = direction.Z * MoveSpeed;
+		} 
 		else
 		{
 			velocity.X = Mathf.MoveToward(Velocity.X, 0, Speed);
