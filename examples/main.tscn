@@ -84,15 +84,15 @@ data = PackedVector3Array(-0.5, -6, -24.5, -0.5, -5.5, -1.25, -0.5, -6, 24.5, -0
 
 [sub_resource type="Curve" id="Curve_03i7d"]
 
-[sub_resource type="ViewportTexture" id="ViewportTexture_f7sj4"]
+[sub_resource type="ViewportTexture" id="ViewportTexture_teuft"]
 viewport_path = NodePath("SubViewport")
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rrq2r"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kneti"]
 resource_local_to_scene = true
 transparency = 1
 shading_mode = 0
 albedo_color = Color(1, 1, 1, 0.752941)
-albedo_texture = SubResource("ViewportTexture_f7sj4")
+albedo_texture = SubResource("ViewportTexture_teuft")
 
 [node name="Main" type="Node3D" unique_id=910781270]
 
@@ -304,7 +304,7 @@ MaxRaycastDistance = 75.0
 IgnoreFloor = true
 
 [node name="quad" parent="BigExplosion/Button/3D_GUI" parent_id_path=PackedInt32Array(991039000, 1504556421) index="1" unique_id=1505330341]
-surface_material_override/0 = SubResource("StandardMaterial3D_rrq2r")
+surface_material_override/0 = SubResource("StandardMaterial3D_kneti")
 
 [editable path="BigExplosion"]
 [editable path="BigExplosion/Button/3D_GUI"]

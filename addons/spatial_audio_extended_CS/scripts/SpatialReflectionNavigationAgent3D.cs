@@ -39,87 +39,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	#endregion
 
-	#region Exports
-
-	/// <summary>
-	/// Options for where the path starts from.
-	/// </summary>
-	public enum OriginModeEnum
-	{
-		/// <summary>
-		/// Use the world position of the resolved node as the origin.
-		/// </summary>
-		NodePosition,
-		/// <summary>
-		/// Apply a local-space offset to the resolved node position.
-		/// </summary>
-		NodeWithLocalOffset,
-		/// <summary>
-		/// Always use the same world position, unaffected by parent movement.
-		/// </summary>
-		FixedWorldPosition,
-	}
-	private OriginModeEnum _originMode = OriginModeEnum.NodeWithLocalOffset;
-	[Export]
-	public OriginModeEnum OriginMode
-	{
-		get => _originMode;
-		set => _originMode = value;
-	}
-
-	/// <summary>
-	/// Options for distance function used for movement and heuristic.
-	/// </summary>
-	public enum DistanceModeEnum
-	{
-		/// <summary>
-		/// Straight-line distance (fastest, best for general use).
-		/// </summary>
-		Euclidean,
-		/// <summary>
-		/// Axis-aligned distance (fast for grid-like layouts, less accurate in open 3D).
-		/// </summary>
-		Manhattan,
-	}
-	private DistanceModeEnum _distanceMode = DistanceModeEnum.Euclidean;
-	[Export]
-	public DistanceModeEnum DistanceMode
-	{
-		get => _distanceMode;
-		set => _distanceMode = value;
-	}
-
-	/// <summary>
-	/// Options for neighbor connectivity for reachable scan.
-	/// </summary>
-	public enum ScanNeighborModeEnum
-	{
-		/// <summary>
-		/// 6-connected neighbors along cardinal axes (fastest, best for open areas).
-		/// </summary>
-		Axis_6,
-		/// <summary>
-		/// 18-connected neighbors including diagonals (moderate cost, better for mixed spaces).
-		/// </summary>
-		Diagonal_18,
-		/// <summary>
-		/// 26-connected neighbors including diagonals and vertical (highest cost, best for tight 3D spaces).
-		/// </summary>
-		Full_26,
-	}
-	private ScanNeighborModeEnum _scanNeighborMode = ScanNeighborModeEnum.Axis_6;
-	[Export] 
-	public ScanNeighborModeEnum ScanNeighborMode
-	{
-		get => _scanNeighborMode;
-		set
-		{
-			_scanNeighborMode = value;
-#if TOOLS
-			MarkGraphDirty();
-#endif
-		}
-	}
+	#region Exports - Navigation
 
 	/// <summary>
 	/// Options for High-level tuning preset for graph generation.
@@ -190,6 +110,9 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	}
 
 	private float _recomputeOriginThreshold = 0.05f;
+	/// <summary>
+	/// Movement threshold for origin required to trigger a full recompute.
+	/// </summary>
 	[Export(PropertyHint.Range, "0.0f, 5.0f, 0.01f, suffix:m")]
 	public float RecomputeOriginThreshold
 	{
@@ -198,6 +121,9 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	}
 
 	private float _recomputeTargetThreshold = 0.08f;
+	/// <summary>
+	/// Movement threshold for listener required to trigger a full recompute.
+	/// </summary>
 	[Export(PropertyHint.Range, "0.0f, 5.0f, 0.01f, suffix:m")]
 	public float RecomputeTargetThreshold
 	{
@@ -206,6 +132,9 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	}
 
 	private float _staticRecomputeInterval = 0.75f;
+	/// <summary>
+	/// Forced full solve interval while static skipping is active (0 disables periodic full solves).
+	/// </summary>
 	[Export(PropertyHint.Range, "0.0f, 5.0f, 0.01f, suffix:s")]
 	public float StaticRecomputeInterval
 	{
@@ -214,22 +143,888 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	}
 
 	private float _navigationRadius = 0.18f;
+	/// <summary>
+	/// Spherical bounds radius used for airborne sample points around the graph anchor.
+	/// </summary>
 	[Export(PropertyHint.Range, "0.0f, 5.0f, 0.01f, suffix:m")]
 	public float NavigationRadius
 	{
 		get => _navigationRadius;
 		set
 		{
-			_navigationRadius = MathF.Max(value, 0.5f);
+			_navigationRadius = value;
 #if TOOLS
 			MarkGraphDirty();
 #endif
 		}
 	}
 
+	private int _samplePointCount = 96;
+	/// <summary>
+	/// Number of random points generated inside the sphere.
+	/// </summary>
+	[Export(PropertyHint.Range, "8, 512, 1")]
+	public int SamplePointCount
+	{
+		get => _samplePointCount;
+		set
+		{
+			_samplePointCount = value;
+			_samplesDirty = true;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private int _sampleSeed = 1337;
+	/// <summary>
+	/// Deterministic random seed for stable sample layout.
+	/// </summary>
+	[Export]
+	public int SampleSeed
+	{
+		get => _sampleSeed;
+		set
+		{
+			_sampleSeed = value;
+			_samplesDirty = true;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private float _maxConnDist = 8.0f;
+	/// <summary>
+	/// Maximum edge length allowed between graph waypoints.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.5f, 128.0f, 0.1f, suffix:m")]
+	public float MaxConnectionDistance
+	{
+		get => _maxConnDist;
+		set
+		{
+			_maxConnDist = value;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private int _graphNeighborLimit = 10;
+	/// <summary>
+	/// Max connected neighbors per waypoint in the cached graph.
+	/// </summary>
+	[Export(PropertyHint.Range, "2, 32, 1")]
+	public int GraphNeighborLimit
+	{
+		get => _graphNeighborLimit;
+		set
+		{
+			_graphNeighborLimit = value;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private int _dynamicConnLimit = 6;
+	/// <summary>
+	/// Max visible graph links from dynamic start/goal to graph.
+	/// </summary>
+	[Export(PropertyHint.Range, "1, 32, 1")]
+	public int DynamicConnectionLimit
+	{
+		get => _dynamicConnLimit;
+		set => _dynamicConnLimit = value;
+	}
+
+	private int _dynamicCanMulti = 4;
+	/// <summary>
+	/// umber of best dynamic-link candidates kept before visibility tests.
+	/// Higher values are more robust but increase physics query cost.
+	/// </summary>
+	[Export(PropertyHint.Range, "1, 12, 1")]
+	public int DynamicCanidateMultiplier
+	{
+		get => _dynamicCanMulti;
+		set => _dynamicCanMulti = value;
+	}
+
+	private float _clearanceRadius = 0.35f;
+	/// <summary>
+	/// Collision clearance radius around sampled points and edge checkpoints.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.01f, 5.0f, 0.01f, suffix:m")]
+	public float ClearanceRadius
+	{
+		get => _clearanceRadius;
+		set
+		{
+			_clearanceRadius = value;
+			_clearanceShape.Radius = value;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private int _edgeClearChecks = 1;
+	/// <summary>
+	/// Number of interior checkpoints used to validate each graph edge.
+	/// </summary>
+	[Export(PropertyHint.Range, "0, 8, 1")]
+	public int EdgeClearanceChecks
+	{
+		get => _edgeClearChecks;
+		set
+		{
+			_edgeClearChecks = value;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private float _graphRecenterDist = 2.0f;
+	/// <summary>
+	/// Rebuild the cached graph when anchor moves more than this distance.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.1f, 64.0f, 0.1f, suffix:m")]
+	public float GraphRecenterDistance
+	{
+		get => _graphRecenterDist;
+		set => _graphRecenterDist = value;
+	}
+
+	private bool _useReachableScan = true;
+	/// <summary>
+	/// Build graph using collision-reachable flood scan from origin (better for tight spaces).
+	/// </summary>
+	[Export]
+	public bool UseReachableScan
+	{
+		get => _useReachableScan;
+		set
+		{
+			_useReachableScan = value;
+#if TOOLS
+			MarkGraphDirty();
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	#endregion
+
+	#region Export - Scanning
+
+	/// <summary>
+	/// Options for neighbor connectivity for reachable scan.
+	/// </summary>
+	public enum ScanNeighborModeEnum
+	{
+		/// <summary>
+		/// 6-connected neighbors along cardinal axes (fastest, best for open areas).
+		/// </summary>
+		Axis_6,
+		/// <summary>
+		/// 18-connected neighbors including diagonals (moderate cost, better for mixed spaces).
+		/// </summary>
+		Diagonal_18,
+		/// <summary>
+		/// 26-connected neighbors including diagonals and vertical (highest cost, best for tight 3D spaces).
+		/// </summary>
+		Full_26,
+	}
+	private ScanNeighborModeEnum _scanNeighborMode = ScanNeighborModeEnum.Axis_6;
+	/// <summary>
+	/// Neighbor connectivity for reachable scan.
+	/// </summary>
+	[ExportSubgroup("Scanning")]
+	[Export] 
+	public ScanNeighborModeEnum ScanNeighborMode
+	{
+		get => _scanNeighborMode;
+		set
+		{
+			_scanNeighborMode = value;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private float _scanCellSize = 1.0f;
+	/// <summary>
+	/// Grid cell size for reachable scan.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.2f, 8.0f, 0.1f, suffix:m")]
+	public float ScanCellSize
+	{
+		get => _scanCellSize;
+		set
+		{
+			_scanCellSize = value;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private int _scanedCellMax = 4096;
+	/// <summary>
+	/// Hard cap on scanned cells for reachable graph build.
+	/// </summary>
+	[Export(PropertyHint.Range, "64, 32768, 1")]
+	public int ScanedCellMax
+	{
+		get => _scanedCellMax;
+		set
+		{
+			_scanedCellMax = value;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private int _scannedMaxExtent = 0;
+	/// <summary>
+	/// Maximum absolute grid extent from the start cell (0 = unlimited).
+	/// Useful to cap scan cost in dense or complex scenes.
+	/// </summary>
+	[Export(PropertyHint.Range, "0, 512, 1")]
+	public int ScannedMaxExtent
+	{
+		get => _scannedMaxExtent;
+		set
+		{
+			_scannedMaxExtent = value;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private float _scanCellInset = 0.08f;
+	/// <summary>
+	/// Extra margin from voxel center toward free space to reduce wall hugging.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.0f, 0.45f, 0.01f")]
+	public float ScanCellInset
+	{
+		get => _scanCellInset;
+		set
+		{
+			_scanCellInset = value;
+#if TOOLS
+			MarkGraphDirty();
+#endif
+		}
+	}
+
+	private float _heuristicWeight = 1.0f;
+	[Export(PropertyHint.Range, "0.1f, 5.0f, 0.05f")]
+	public float HeuristicWeight
+	{
+		get => _heuristicWeight;
+		set => _heuristicWeight = value;
+	}
+	
+	#endregion
+
+	#region Exports - Distance Mode
+
+	/// <summary>
+	/// Options for distance function used for movement and heuristic.
+	/// </summary>
+	public enum DistanceModeEnum
+	{
+		/// <summary>
+		/// Straight-line distance (fastest, best for general use).
+		/// </summary>
+		Euclidean,
+		/// <summary>
+		/// Axis-aligned distance (fast for grid-like layouts, less accurate in open 3D).
+		/// </summary>
+		Manhattan,
+	}
+	private DistanceModeEnum _distanceMode = DistanceModeEnum.Euclidean;
+	/// <summary>
+	/// Distance function for movement and heuristic.
+	/// </summary>
+	[ExportSubgroup("Distance Mode")]
+	[Export]
+	public DistanceModeEnum DistanceMode
+	{
+		get => _distanceMode;
+		set => _distanceMode = value;
+	}
+
+	private bool _useUnitCost = false;
+	/// <summary>
+	/// If true, every edge has the same movement cost.
+	/// </summary>
+	[Export]
+	public bool UseUnitCost
+	{
+		get => _useUnitCost;
+		set
+		{
+			_useUnitCost = value;
+#if TOOLS
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	private float _unitCost = 1.0f;
+	/// <summary>
+	/// Unit cost used when use_unit_cost is true.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.01f, 50.0f, 0.01f")]
+	public float UnitCost
+	{
+		get => _unitCost;
+		set => _unitCost = value;
+	}
+
+	private bool _reuseLastPath = true;
+	/// <summary>
+	/// Reuse previous solved around-corner path until it becomes invalid.
+	/// </summary>
+	[Export]
+	public bool ReuseLastPath
+	{
+		get => _reuseLastPath;
+		set
+		{
+			_reuseLastPath = value;
+#if TOOLS
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	private float _reuseOriginTol = 0.60f;
+	/// <summary>
+	/// Maximum movement of the origin before cached path reuse is rejected.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.0f, 16.0f, 0.05f, suffix:m")]
+	public float ReuseOriginTolerance
+	{
+		get => _reuseOriginTol;
+		set => _reuseOriginTol = value;
+	}
+
+	private float _reuseTarTol = 0.90f;
+	/// <summary>
+	///  Maximum movement of the target before cached path reuse is rejected.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.0f, 16.0f, 0.05f, suffix:m")]
+	public float ReuseTarTolerance
+	{
+		get => _reuseTarTol;
+		set => _reuseTarTol = value;
+	}
+
+	private float _reuseMaxDetRatio = 2.0f;
+	/// <summary>
+	/// Reject cached path if too long compared to direct distance.
+	/// </summary>
+	[Export(PropertyHint.Range, "1.0f, 6.0f, 0.05f")]
+	public float ReuseMaxDetourRatio
+	{
+		get => _reuseMaxDetRatio;
+		set => _reuseMaxDetRatio = value;
+	}
+
+	private bool _smoothPathWithVis = true;
+	/// <summary>
+	/// If true, run visibility-based line-of-sight smoothing on solved paths.
+	/// </summary>
+	[Export]
+	public bool SmoothPathWithVisiblity
+	{
+		get => _smoothPathWithVis;
+		set => _smoothPathWithVis = value;
+	}
+
+	private uint _collisionMask = 1 << 0;
+	[Export(PropertyHint.Layers3DPhysics)]
+	public uint CollisionMask
+	{
+		get => _collisionMask;
+		set => _collisionMask = value;
+	}
+
+	private bool _collideWithAreas = false;
+	/// <summary>
+	/// If true, include Area3D nodes as blockers.
+	/// </summary>
+	[Export]
+	public bool CollideWithAreas
+	{
+		get => _collideWithAreas;
+		set => _collideWithAreas = value;
+	}
+
+	private bool _collideWithBodies = true;
+	/// <summary>
+	/// If true, include PhysicsBody3D nodes as blockers.
+	/// </summary>
+	[Export]
+	public bool CollideWithBodies
+	{
+		get => _collideWithBodies;
+		set => _collideWithBodies = value;
+	}
+
+	private bool _ignoreListenerBody = true;
+	/// <summary>
+	/// Ignore the active camera's collision parent/body in path queries.
+	/// </summary>
+	[Export]
+	public bool IgnoreListenerBody
+	{
+		get => _ignoreListenerBody;
+		set => _ignoreListenerBody = value;
+	}
+
+	private Godot.Collections.Array<Node3D> _excludedCollisionNodes;
+	[Export]
+	public Godot.Collections.Array<Node3D> ExcludedCollisionNodes
+	{
+		get => _excludedCollisionNodes;
+		set
+		{
+			_excludedCollisionNodes = value;
+			_exclusionsDirty = true;
+		}
+	}
+
+	#endregion
+
+	#region Exports - Origin
+
+	/// <summary>
+	/// Options for where the path starts from.
+	/// </summary>
+	public enum OriginModeEnum
+	{
+		/// <summary>
+		/// Use the world position of the resolved node as the origin.
+		/// </summary>
+		NodePosition,
+		/// <summary>
+		/// Apply a local-space offset to the resolved node position.
+		/// </summary>
+		NodeWithLocalOffset,
+		/// <summary>
+		/// Always use the same world position, unaffected by parent movement.
+		/// </summary>
+		FixedWorldPosition,
+	}
+	private OriginModeEnum _originMode = OriginModeEnum.NodeWithLocalOffset;
+	/// <summary>
+	/// Where the path starts from.
+	/// </summary>
+	[ExportGroup("Origin")]
+	[Export]
+	public OriginModeEnum OriginMode
+	{
+		get => _originMode;
+		set => _originMode = value;
+	}
+
+	// FIXME: These don't have backers, do they need backers?
+
+	/// <summary>
+	/// Origin node override when using NODE_* origin modes.
+	/// </summary>
+	[Export]
+	public Node3D OriginOverride { get; set; } = null;
+
+	/// <summary>
+	/// Local-space offset applied after resolving origin node.
+	/// </summary>
+	[Export]
+	public Vector3 OriginLocalOffset { get; set; } = Vector3.Zero;
+
+	/// <summary>
+	/// Fixed world start position (unaffected by parent movement).
+	/// </summary>
+	[Export]
+	public Vector3 FixedWorldOrigin { get; set; } = Vector3.Zero;
+
+	/// <summary>
+	/// Capture the current resolved node origin into fixed_world_origin on ready.
+	/// </summary>
+	[Export]
+	public bool CaptureFixedOriginOnReady { get; set; } = false;
+
+	#endregion
+
+	#region Exports - Target
+
+	/// <summary>
+	/// Manual target override. If null, active camera is used.
+	/// </summary>
+	[ExportGroup("Target")]
+	[Export]
+	public Node3D TargetOverride { get; set; } = null;
+
+	#endregion
+
+	#region Exports - Proxy
+
+	private bool _moveAudioPlayer = false;
+	/// <summary>
+	/// If enabled, this agent moves an audio player proxy along the computed path.
+	/// </summary>
+	[ExportGroup("Audio Proxy")]
+	[Export]
+	public bool MoveAudioPlayer
+	{
+		get => _moveAudioPlayer;
+		set
+		{
+			_moveAudioPlayer = value;
+#if TOOLS
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	private Node3D _audioPlayerNode = null;
+	/// <summary>
+	/// Explicit audio player node to move.
+	/// </summary>
+	[Export]
+	public Node3D AudioPlayerNode
+	{
+		get => _audioPlayerNode;
+		set
+		{
+			_audioPlayerNode = value;
+#if TOOLS
+			ResolveAudioProxyRef();
+			UpdateConfigurationWarnings();
+#endif
+		}
+	}
+
+	private bool _autoFindAudioPlayerChild = true;
+	/// <summary>
+	/// If true and audio_player_node is empty, auto-find first AudioStreamPlayer3D child.
+	/// </summary>
+	[ExportGroup("Audio Proxy")]
+	[Export]
+	public bool autoFindAudioPlayerChild
+	{
+		get => _autoFindAudioPlayerChild;
+		set
+		{
+			_autoFindAudioPlayerChild = value;
+#if TOOLS
+			ResolveAudioProxyRef();
+			UpdateConfigurationWarnings();
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	/// <summary>
+	/// If true, only move to a waypoint when the direct line is blocked.
+	/// </summary>
+	[Export]
+	public bool ProxyOnlyWhenBlocked { get; set; } = true;
+
+	/// <summary>
+	/// Path index used for the proxy (1 = first waypoint after origin).
+	/// </summary>
+	[Export(PropertyHint.Range, "1, 64, 1")]
+	public int ProxyWaypointIndex { get; set; } = 2;
+
+	/// <summary>
+	/// Smooths proxy movement (0 = snap instantly).
+	/// </summary>
+	[Export(PropertyHint.Range, "1.0f, 60.0f, 0.1f")]
+	public float AudioProxyLerpSpeed { get; set; } = 30.0f;
+
+	/// <summary>
+	/// Lerp speed while backing away from a too-close listener.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.0f, 40.0f, 0.1f")]
+	public float AudioProxyBackoffLerpSpeed { get; set; } = 4.0f;
+
+	/// <summary>
+	/// Vertical offset added to the proxy target position.
+	/// </summary>
+	[Export(PropertyHint.Range, "-5.0f, 5.0f, 0.01f, suffix:m")]
+	public float AudioProxyHeightOffset { get; set; } = 0.0f;
+
+	/// <summary>
+	/// Return the moved audio node to origin when proxy movement is disabled.
+	/// </summary>
+	[Export]
+	public bool RestoreAudioToOriginWhenDisabled { get; set; } = true;
+
+	/// <summary>
+	/// While reflected, temporarily force inner_radius to 0 when proxy is outside source inner zone.
+	/// </summary>
+	[Export]
+	public bool ProxyForceInnerRadiusOutsideSourceZone { get; set; } = true;
+
+	private bool _enableProxyListenerBackoff = true;
+	/// <summary>
+	/// Keep reflected proxy from getting too close to listener by backing up on the path.
+	/// </summary>
+	[Export]
+	public bool EnableProxyListenerBackoff
+	{
+		get => _enableProxyListenerBackoff;
+		set
+		{
+			_enableProxyListenerBackoff = value;
+#if TOOLS
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	/// <summary>
+	/// Enter backoff when listener is nearer than this to the reflected proxy.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.1f, 20.0f, 0.05f, suffix:m")]
+	public float ProxyMinListenerDistance { get; set; } = 1.6f;
+
+	/// <summary>
+	/// Exit backoff only when listener distance exceeds this threshold.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.1f, 20.0f, 0.05f, suffix:m")]
+	public float ProxyBackoffReleaseDistance { get; set; } = 2.2f;
+
+	/// <summary>
+	/// Distance from listener along the solved path where proxy retreats to.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.1f, 50.0f, 0.05f, suffix:m")]
+	public float ProxyBackoffPathDistance { get; set; } = 2.8f;
+
+	private bool _proxySpringArmEnabled = true;
+	/// <summary>
+	/// Keep reflected proxy from getting too close to listener by backing up on the path.
+	/// </summary>
+	[Export]
+	public bool ProxySpringArmEnabled
+	{
+		get => _proxySpringArmEnabled;
+		set
+		{
+			_proxySpringArmEnabled = value;
+#if TOOLS
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	/// <summary>
+	/// Minimum allowed listener distance for the reflected proxy.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.1f, 20.0f, 0.05f, suffix:m")]
+	public float ProxSpringMinDistance { get; set; } = 1.5f;
+
+	/// <summary>
+	/// Extra retreat amount when listener breaches the minimum distance.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.0f, 4.0f, 0.05f")]
+	public float ProxySpringPushStrength { get; set; } = 1.0f;
+
+	/// <summary>
+	/// Spring response speed while pushing away from listener.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.1f, 40.0f, 0.1f")]
+	public float ProxySpringPushSpeed { get; set; } = 10.0f;
+
+	/// <summary>
+	/// Spring response speed while relaxing back toward the base proxy target.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.1f, 40.0f, 0.1f")]
+	public float ProxySpringReturnSpeed { get; set; } = 6.0f;
+
+	#endregion
+
+	#region Exports - Reflection
+
+	private bool _applyRefectionVolumeLoss = true;
+	/// <summary>
+	/// Apply additional reflection loudness loss based on proxy distance from source origin.
+	/// </summary>
+	[ExportGroup("Reflection Audio")]
+	[Export]
+	public bool ApplyRefectionVolumeLoss
+	{
+		get => _applyRefectionVolumeLoss;
+		set
+		{
+			_applyRefectionVolumeLoss = true;
+#if TOOLS
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	/// <summary>
+	/// Added loss per meter from origin to proxy.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.0f, 6.0f, 0.01f, suffix:dB/m")]
+	public float ReflectionLossDbPerMeter { get; set; } = 0.45f;
+
+	/// <summary>
+	/// Non-linear exponent for reflection loss distance.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.2f, 3.0f, 0.05f")]
+	public float ReflectionLossPower { get; set; } = 1.0f;
+
+	/// <summary>
+	/// Max additional loss from reflection routing.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.0f, 80.0f, 0.1f, suffix:dB")]
+	public float ReflectionMaxLossDb { get; set; } = 20.0f;
+
+	private bool _proxyOcclusionTransitionSmoothing = true;
+	/// <summary>
+	/// Hold occlusion open briefly while proxy transitions to reflected position.
+	/// </summary>
+	[Export]
+	public bool ProxyOcclusionTransitionSmoothing
+	{
+		get => _proxyOcclusionTransitionSmoothing;
+		set
+		{
+			_proxyOcclusionTransitionSmoothing = true;
+#if TOOLS
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	/// <summary>
+	/// Hold duration used when returning from reflected proxy back to direct mode.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.0f, 1.0f, 0.01f, suffix:s")]
+	public float ProxyOcclusionHoldSeconds { get; set; } = 0.18f;
+
+	/// <summary>
+	/// Extend hold while returning movement is still larger than this threshold.
+	/// </summary>
+	[Export(PropertyHint.Range, "0.0f, 10.0f, 0.01f, suffix:m")]
+	public float ProxyOcclusionHoldMoveThreshold { get; set; } = 0.25f;
+
+	#endregion
+
+	#region Exports - Debug
+
+	private bool _previewPathingInEditor = false;
+	/// <summary>
+	/// When false, full runtime behavior is disabled in editor.
+	/// Selected-node preview for bounds/path still runs for inspection.
+	/// </summary>
+	[ExportGroup("Debug")]
+	[Export]
+	public bool PreviewPathingInEditor
+	{
+		get => _previewPathingInEditor;
+		set
+		{
+#if TOOLS
+			bool wasEnabled = PreviewPathingInEditor;
+#endif
+			_previewPathingInEditor = value;
+#if TOOLS
+			if (wasEnabled && !value) ResetAudioProxyToOrigin();
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	/// <summary>
+	/// Draws the navigation sphere centered at the resolved origin.
+	/// </summary>
+	[Export]
+	public bool DebugDrawBounds { get; set; } = false;
+
+	private bool _debugDrawPath = false;
+	/// <summary>
+	/// Draws the currently solved path polyline.
+	/// </summary>
+	[Export]
+	public bool DebugDrawPath
+	{
+		get => _debugDrawPath;
+		set
+		{
+			_debugDrawPath = value;
+#if TOOLS
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	[Export]
+	public bool DebugDrawDirectLineWhenBlocked { get; set; } = false;
+
+	[Export]
+	public bool DebugDrawGraphPoints { get; set; } = false;
+
+	[Export]
+	public bool DebugDrawGraphEdges { get; set; } = false;
+
+	private bool _debugDrawAudioProxy = false;
+	/// <summary>
+	/// 
+	/// </summary>
+	[Export]
+	public bool DebugDrawAudioProxy
+	{
+		get => _debugDrawAudioProxy;
+		set
+		{
+			_debugDrawAudioProxy = value;
+#if TOOLS
+			NotifyPropertyListChanged();
+#endif
+		}
+	}
+
+	[Export(PropertyHint.Range, "0.02f, 2.0f, 0.01f, suffix:m")]
+	public float DebugAudioProxyRadius { get; set; } = 0.20f;
+
+	[Export]
+	public Color DebugBoundsColor { get; set; } = new(0.12f, 0.65f, 1.0f, 0.65f);
+
+	[Export]
+	public Color DebugPathColor { get; set; } = new(0.2f, 1.0f, 0.25f, 0.95f);
+
+	[Export]
+	public Color DebugBlockedColor { get; set; } = new(1.0f, 0.25f, 0.2f, 0.95f);
+
+	[Export]
+	public Color DebugGraphColor { get; set; } = new(1.0f, 0.9f, 0.2f, 0.50f);
+
+	[Export]
+	public Color DebugAudioProxyColor { get; set; } = new(1.0f, 0.25f, 0.9f, 0.95f);
+
 	#endregion
 
 	#region Internal
+
+	private bool _samplesDirty = true;
+	private SphereShape3D _clearanceShape = new();
+
+	private bool _exclusionsDirty = true;
 
 	private readonly string[] _NAV_PROFILE_CUSTOM_ONLY_PROPS = [
 		"skip_recompute_when_static",
@@ -288,10 +1083,20 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		// TODO: ApplyNavigationProfilePreset
 	}
-	
+
 	private void MarkGraphDirty()
 	{
 		// TODO: MarkGraphDirty
+	}
+
+	private void ResolveAudioProxyRef()
+	{
+		// TODO: ResolveAudioProxyRef
+	}
+
+	private void ResetAudioProxyToOrigin()
+	{
+		// TODO: ResetAudioProxyToOrigin
 	}
 
 	#endregion
