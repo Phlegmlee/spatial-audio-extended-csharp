@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Godot;
 namespace SpatialAudioCS;
@@ -38,6 +37,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	[Signal] public delegate void GraphRebuiltEventHandler(int pointCount);
 
 	#endregion
+
+	#region Exports
 
 	#region Exports - Navigation
 
@@ -1019,7 +1020,11 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	#endregion
 
+	#endregion
+
 	#region Internal
+
+	// TODO: Internal
 
 	private bool _samplesDirty = true;
 	private SphereShape3D _clearanceShape = new();
@@ -1065,13 +1070,17 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	#endregion
 
-	#region Editor Configuration
-
-	// TODO: Editor Configuration
-
-	#endregion
-
 	#region Gameplay Logic
+
+	public override void _Ready()
+	{
+		// TODO: _Ready
+	}
+
+	public override void _Process(double delta)
+	{
+		// TODO: _Process
+	}
 
 	// TODO: Gameplay Logic
 
@@ -1098,6 +1107,55 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		// TODO: ResetAudioProxyToOrigin
 	}
+
+	private SpatialAudioPlayer3D FindSpatialAudioPlayer()
+	{
+		// TODO: FindSpatialAudioPlayer
+
+		return new SpatialAudioPlayer3D();
+	}
+
+	private bool IsSpatialAudioPlayerFound()
+	{
+		SpatialAudioPlayer3D result = FindSpatialAudioPlayer();
+
+		return result == null;
+	}
+
+	#endregion
+
+	#region Editor Config
+
+	public override void _Notification(int what)
+	{
+		if (what == NotificationChildOrderChanged)
+		{
+			_exclusionsDirty = true;
+			UpdateConfigurationWarnings();
+		}
+	}
+
+	public override string[] _GetConfigurationWarnings()
+	{
+		List<string> warnings = [];
+
+		bool foundSpatial = IsSpatialAudioPlayerFound();
+		if (!foundSpatial)
+		{
+			warnings.Add($"No SpatialAudioPlayer3D was found. Add one as a child or assign one in {AudioPlayerNode} for reflected proxy playback.");
+		}
+
+		// TODO: _GetConfigurationWarnings
+
+		return [.. warnings];
+	}
+
+	public override void _ValidateProperty(Godot.Collections.Dictionary property)
+	{
+		// TODO: _ValidateProperty
+	}
+
+	// TODO: Editor Configuration
 
 	#endregion
 
