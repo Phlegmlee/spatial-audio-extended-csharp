@@ -50,8 +50,8 @@ The material resource files can be found in the `addons/spatial_audio_extended_C
 // Load resource file from disk
 AcousticMaterial loadMat = GD.Load("res://addons/spatial_audio_extended_CS/materials/concrete.tres") as AcousticMaterial;
 
-// Or use a static constructor
-AcousticMaterial mat = AcousticMaterial.PresetConcrete();
+// Or access the static constructor
+AcousticMaterial m = AcousticMaterial.Concrete;
 ```
 
 ---

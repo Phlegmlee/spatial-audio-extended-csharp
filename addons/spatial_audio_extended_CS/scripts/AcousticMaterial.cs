@@ -138,246 +138,202 @@ public partial class AcousticMaterial : Resource
 
 	#region Preset Materials
 
-	/// <summary>
-	/// Generic material preset.
-	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetGeneric()
+	private static readonly AcousticMaterial _generic = new()
 	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.10f,
-			AbsorptionMid = 0.20f,
-			AbsorptionHigh = 0.30f,
-			Scattering = 0.05f,
-			TransmissionLow = 0.100f,
-			TransmissionMid = 0.050f,
-			TransmissionHigh = 0.030f
-		};
+		AbsorptionLow = 0.10f,
+		AbsorptionMid = 0.20f,
+		AbsorptionHigh = 0.30f,
+		Scattering = 0.05f,
+		TransmissionLow = 0.100f,
+		TransmissionMid = 0.050f,
+		TransmissionHigh = 0.030f
+	};
 
-		return material;
-	}
-
-	/// <summary>
-	/// Brick material preset.
-	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetBrick()
+	private static readonly AcousticMaterial _brick = new()
 	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.03f,
-			AbsorptionMid = 0.04f,
-			AbsorptionHigh = 0.07f,
-			Scattering = 0.05f,
-			TransmissionLow = 0.025f,
-			TransmissionMid = 0.019f,
-			TransmissionHigh = 0.010f
-		};
+		AbsorptionLow = 0.03f,
+		AbsorptionMid = 0.04f,
+		AbsorptionHigh = 0.07f,
+		Scattering = 0.05f,
+		TransmissionLow = 0.025f,
+		TransmissionMid = 0.019f,
+		TransmissionHigh = 0.010f
+	};
 
-		return material;
-	}
-
-	/// <summary>
-	/// Concrete material preset.
-	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetConcrete()
+	private static readonly AcousticMaterial _concrete = new()
 	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.05f,
-			AbsorptionMid = 0.07f,
-			AbsorptionHigh = 0.08f,
-			Scattering = 0.05f,
-			TransmissionLow = 0.015f,
-			TransmissionMid = 0.011f,
-			TransmissionHigh = 0.008f
-		};
+		AbsorptionLow = 0.05f,
+		AbsorptionMid = 0.07f,
+		AbsorptionHigh = 0.08f,
+		Scattering = 0.05f,
+		TransmissionLow = 0.015f,
+		TransmissionMid = 0.011f,
+		TransmissionHigh = 0.008f
+	};
 
-		return material;
-	}
-
-	/// <summary>
-	/// Ceramic material preset.
-	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetCeramic()
+	private static readonly AcousticMaterial _ceramic = new()
 	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.01f,
-			AbsorptionMid = 0.02f,
-			AbsorptionHigh = 0.02f,
-			Scattering = 0.05f,
-			TransmissionLow = 0.060f,
-			TransmissionMid = 0.044f,
-			TransmissionHigh = 0.011f
-		};
+		AbsorptionLow = 0.01f,
+		AbsorptionMid = 0.02f,
+		AbsorptionHigh = 0.02f,
+		Scattering = 0.05f,
+		TransmissionLow = 0.060f,
+		TransmissionMid = 0.044f,
+		TransmissionHigh = 0.011f
+	};
 
-		return material;
-	}
-
-	/// <summary>
-	/// Gravel material preset.
-	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetGravel()
+	private static readonly AcousticMaterial _gravel = new()
 	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.60f,
-			AbsorptionMid = 0.70f,
-			AbsorptionHigh = 0.80f,
-			Scattering = 0.60f,
-			TransmissionLow = 0.031f,
-			TransmissionMid = 0.012f,
-			TransmissionHigh = 0.008f
-		};
+		AbsorptionLow = 0.60f,
+		AbsorptionMid = 0.70f,
+		AbsorptionHigh = 0.80f,
+		Scattering = 0.60f,
+		TransmissionLow = 0.031f,
+		TransmissionMid = 0.012f,
+		TransmissionHigh = 0.008f
+	};
 
-		return material;
-	}
-
-	/// <summary>
-	/// Carpet material preset.
-	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetCarpet()
+	private static readonly AcousticMaterial _carpet = new()
 	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.24f,
-			AbsorptionMid = 0.69f,
-			AbsorptionHigh = 0.73f,
-			Scattering = 0.57f,
-			TransmissionLow = 0.020f,
-			TransmissionMid = 0.005f,
-			TransmissionHigh = 0.003f
-		};
+		AbsorptionLow = 0.24f,
+		AbsorptionMid = 0.69f,
+		AbsorptionHigh = 0.73f,
+		Scattering = 0.57f,
+		TransmissionLow = 0.020f,
+		TransmissionMid = 0.005f,
+		TransmissionHigh = 0.003f
+	};
 
-		return material;
-	}
-
-	/// <summary>
-	/// Glass material preset.
-	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetGlass()
+	private static readonly AcousticMaterial _glass = new()
 	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.25f,
-			AbsorptionMid = 0.06f,
-			AbsorptionHigh = 0.03f,
-			Scattering = 0.05f,
-			TransmissionLow = 0.060f,
-			TransmissionMid = 0.044f,
-			TransmissionHigh = 0.011f
-		};
+		AbsorptionLow = 0.25f,
+		AbsorptionMid = 0.06f,
+		AbsorptionHigh = 0.03f,
+		Scattering = 0.05f,
+		TransmissionLow = 0.060f,
+		TransmissionMid = 0.044f,
+		TransmissionHigh = 0.011f
+	};
 
-		return material;
-	}
+	private static readonly AcousticMaterial _plaster = new()
+	{
+		AbsorptionLow = 0.12f,
+		AbsorptionMid = 0.06f,
+		AbsorptionHigh = 0.04f,
+		Scattering = 0.05f,
+		TransmissionLow = 0.056f,
+		TransmissionMid = 0.028f,
+		TransmissionHigh = 0.004f
+	};
+
+	private static readonly AcousticMaterial _wood = new()
+	{
+		AbsorptionLow = 0.11f,
+		AbsorptionMid = 0.07f,
+		AbsorptionHigh = 0.06f,
+		Scattering = 0.05f,
+		TransmissionLow = 0.200f,
+		TransmissionMid = 0.025f,
+		TransmissionHigh = 0.010f
+	};
+
+	private static readonly AcousticMaterial _metal = new()
+	{
+		AbsorptionLow = 0.20f,
+		AbsorptionMid = 0.07f,
+		AbsorptionHigh = 0.06f,
+		Scattering = 0.05f,
+		TransmissionLow = 0.200f,
+		TransmissionMid = 0.025f,
+		TransmissionHigh = 0.010f
+	};
+
+	private static readonly AcousticMaterial _rock = new()
+	{
+		AbsorptionLow = 0.13f,
+		AbsorptionMid = 0.20f,
+		AbsorptionHigh = 0.24f,
+		Scattering = 0.20f,
+		TransmissionLow = 0.015f,
+		TransmissionMid = 0.002f,
+		TransmissionHigh = 0.001f
+	};
+
+	private static readonly AcousticMaterial _acousticFoam = new()
+	{
+		AbsorptionLow = 1.00f,
+		AbsorptionMid = 1.00f,
+		AbsorptionHigh = 1.00f,
+		Scattering = 0.60f,
+		TransmissionLow = 0.000f,
+		TransmissionMid = 0.000f,
+		TransmissionHigh = 0.000f,
+		TotalAbsorptionTransitionSpeed = 1.2f
+	};
+
+	#endregion
+
+	#region Static Access
 
 	/// <summary>
-	/// Plaster material preset.
+	/// Default values of Absorption, Scattering and Transmisstion.
 	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetPlaster()
-	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.12f,
-			AbsorptionMid = 0.06f,
-			AbsorptionHigh = 0.04f,
-			Scattering = 0.05f,
-			TransmissionLow = 0.056f,
-			TransmissionMid = 0.028f,
-			TransmissionHigh = 0.004f
-		};
-
-		return material;
-	}
+	public static AcousticMaterial PresetGeneric => _generic;
 
 	/// <summary>
-	/// Wood material preset.
+	/// Values to mimic the acoustic properties of brick.
 	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetWood()
-	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.11f,
-			AbsorptionMid = 0.07f,
-			AbsorptionHigh = 0.06f,
-			Scattering = 0.05f,
-			TransmissionLow = 0.200f,
-			TransmissionMid = 0.025f,
-			TransmissionHigh = 0.010f
-		};
-
-		return material;
-	}
+	public static AcousticMaterial PresetBrick => _brick;
 
 	/// <summary>
-	/// Metal material preset.
+	/// Values to mimic the acoustic properties of concrete.
 	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetMetal()
-	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.20f,
-			AbsorptionMid = 0.07f,
-			AbsorptionHigh = 0.06f,
-			Scattering = 0.05f,
-			TransmissionLow = 0.200f,
-			TransmissionMid = 0.025f,
-			TransmissionHigh = 0.010f
-		};
-
-		return material;
-	}
+	public static AcousticMaterial PresetConcrete => _concrete;
 
 	/// <summary>
-	/// Rock material preset.
+	/// Values to mimic the acoustic properties of ceramic.
 	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetRock()
-	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 0.13f,
-			AbsorptionMid = 0.20f,
-			AbsorptionHigh = 0.24f,
-			Scattering = 0.20f,
-			TransmissionLow = 0.015f,
-			TransmissionMid = 0.002f,
-			TransmissionHigh = 0.001f
-		};
+	public static AcousticMaterial PresetCeramic => _ceramic;
 
-		return material;
-	}
-	
 	/// <summary>
-	/// Acoustic foam material preset.
+	/// Values to mimic the acoustic properties of gravel.
 	/// </summary>
-	/// <returns>A custom material resource.</returns>
-	public static AcousticMaterial PresetAcousticFoam()
-	{
-		AcousticMaterial material = new()
-		{
-			AbsorptionLow = 1.00f,
-			AbsorptionMid = 1.00f,
-			AbsorptionHigh = 1.00f,
-			Scattering = 0.60f,
-			TransmissionLow = 0.000f,
-			TransmissionMid = 0.000f,
-			TransmissionHigh = 0.000f,
-			TotalAbsorptionTransitionSpeed = 1.2f
-		};
+	public static AcousticMaterial PresetGravel => _gravel;
 
-		return material;
-	}
+	/// <summary>
+	/// Values to mimic the acoustic properties of carpet.
+	/// </summary>
+	public static AcousticMaterial PresetCarpet => _carpet;
+
+	/// <summary>
+	/// Values to mimic the acoustic properties of glass.
+	/// </summary>
+	public static AcousticMaterial PresetGlass => _glass;
+
+	/// <summary>
+	/// Values to mimic the acoustic properties of plaster.
+	/// </summary>
+	public static AcousticMaterial PresetPlaster => _plaster;
+
+	/// <summary>
+	/// Values to mimic the acoustic properties of wood.
+	/// </summary>
+	public static AcousticMaterial PresetWood => _wood;
+
+	/// <summary>
+	/// Values to mimic the acoustic properties of metal.
+	/// </summary>
+	public static AcousticMaterial PresetMetal => _metal;
+
+	/// <summary>
+	/// Values to mimic the acoustic properties of rock.
+	/// </summary>
+	public static AcousticMaterial PresetRock => _rock;
+
+	/// <summary>
+	/// Values to mimic the acoustic properties of acoustic foam.
+	/// </summary>
+	public static AcousticMaterial PresetAcousticFoam => _acousticFoam;
 
 	#endregion
 }
