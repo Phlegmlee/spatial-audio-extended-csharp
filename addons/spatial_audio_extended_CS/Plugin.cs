@@ -8,6 +8,7 @@ public partial class Plugin : EditorPlugin
 	private Button AcousticButton = null;
 
 	EditorInterface editorInterface = null;
+	private static Godot.Collections.Array<Node> EditorSelections = [];
 
 	public override void _EnterTree()
 	{
@@ -23,13 +24,13 @@ public partial class Plugin : EditorPlugin
 
 	private void OnSelectionChanged()
 	{
-		Godot.Collections.Array<Node> selections = editorInterface.GetSelection().GetSelectedNodes();
+		EditorSelections = editorInterface.GetSelection().GetSelectedNodes();
 
-		if (selections.Count < 1) return;
+		if (EditorSelections.Count < 1) return;
 
-		if (selections.Count == 1 && selections[0] is CollisionObject3D || selections[0] is CsgShape3D)
+		if (EditorSelections.Count == 1 && EditorSelections[0] is CollisionObject3D || EditorSelections[0] is CsgShape3D)
 		{
-			Node3D selected = selections[0] as Node3D;
+			Node3D selected = EditorSelections[0] as Node3D;
 			bool alreadyHas = AcousticBody.IsOnNode(selected);
 			if (!alreadyHas)
 			{
@@ -105,6 +106,11 @@ public partial class Plugin : EditorPlugin
 		editorInterface.GetSelection().AddNode(aB);
 
 		RemoveButton();
+	}
+
+	public static Godot.Collections.Array<Node> GetEditorSelected()
+	{
+		return EditorSelections;
 	}
 }
 #endif

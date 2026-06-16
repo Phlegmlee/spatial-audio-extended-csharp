@@ -1024,10 +1024,37 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	#region Internal
 
-	// TODO: Internal
-
+	private double _timeAccum = 0.0;
+	private double _timeSinceRecompute = 0.0;
 	private bool _samplesDirty = true;
+	private bool _graphDirty = true;
+	private List<Vector3> _sampleOffsets = [];
 	private SphereShape3D _clearanceShape = new();
+
+	private Vector3 _graphAnchor = Vector3.Zero;
+	private Vector3 _graphOrigin = Vector3.Zero;
+	private List<Vector3> _graphPoints = [];
+	private List<int[]> _graphEdges = [];
+	private int _graphEdgeCount = 0;
+	private Vector3[] _cachedWaypoints = [];
+	private Vector3 _cachedOrigin = Vector3.Zero;
+	private Vector3 _cachedTarget = Vector3.Zero;
+	private float _cachedPathLen = 0.0f;
+	private float _currentPathLen = 0.0f;
+
+	private List<Vector3[]> _currentPath = [];
+	private bool _hasValidPath = false;
+	private bool _isDirectPath = false;
+	private Vector3 _lastOrigin = Vector3.Zero;
+	private Vector3 _lastTarget = Vector3.Zero;
+	private Vector3 _lastSolveOrigin = Vector3.Zero;
+	private Vector3 _lastSolveTarget = Vector3.Zero;
+	private bool _hasLastSolve = false;
+
+	private PhysicsRayQueryParameters3D _rayQuery;
+	private PhysicsShapeQueryParameters3D _shapeQuery;
+
+	// TODO: Internal
 
 	private bool _exclusionsDirty = true;
 
@@ -1074,15 +1101,96 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	public override void _Ready()
 	{
-		// TODO: _Ready
+		if (Engine.IsEditorHint()) EditorReady();
+
+		_clearanceShape.Radius = ClearanceRadius;
+		_shapeQuery = new()
+		{
+			CollisionMask = CollisionMask,
+			CollideWithAreas = CollideWithAreas,
+			CollideWithBodies = CollideWithBodies,
+		};
+		_rayQuery = new()
+		{
+			CollisionMask = CollisionMask,
+			CollideWithAreas = CollideWithAreas,
+			CollideWithBodies = CollideWithBodies,
+			HitFromInside = true,
+		};
+
+		if (CaptureFixedOriginOnReady) FixedWorldOrigin = ResolveNodeOrigin();
+
+		ApplyNavigationProfilePreset();
+		CheckRebuildSamples();
+		ResolveAudioProxyRef();
+		RecomputePath();
 	}
 
 	public override void _Process(double delta)
 	{
-		// TODO: _Process
+		bool editorPreview = Engine.IsEditorHint() && !PreviewPathingInEditor;
+		bool editorSelected = false;
+		if (editorPreview) editorSelected = IsEditorSelected();
+
+		if (editorPreview)
+		{
+			if (editorSelected && _timeAccum < UpdateInterval)
+			{ _timeSinceRecompute += delta; _timeAccum += delta; }
+			else { _timeAccum = 0.0; RecomputePath(); }
+
+			// TODO: DrawDebug(editorSelected);
+
+			return;
+		}
+
+		_timeSinceRecompute += delta;
+		_timeAccum += delta;
+		if (_timeAccum >= UpdateInterval)
+		{ _timeAccum = 0.0; RecomputePath(); }
+		UpdateAudioProxy(delta);
+		// TODO: DrawDebug(false);
 	}
 
 	// TODO: Gameplay Logic
+
+	#endregion
+
+	#region Utils - Path
+
+	private void RecomputePath()
+	{
+		// TODO: RecomputePath
+	}
+
+	private Vector3[] FindPathGreedyAStar()
+	{
+		Vector3[] path = [];
+
+		// TODO: FindPathGreedyAStar
+
+		return path;
+	}
+
+	private void SetPath(Vector3[] path, bool direct)
+	{
+		// TODO: SetPath
+	}
+
+	private void SetFailedPath(Vector3 origin, Vector3 target, bool blocked)
+	{
+		// TODO: SetFailedPath
+	}
+
+	// TODO: Heap Push
+	// TODO: Heap Pop
+	// TODO: Neighbors Of
+	// TODO: Estimate Cost
+	// TODO: Compute Move Cost
+	// TODO: Id to point
+	// TODO: Try Resuse Cached Path
+	// TODO: Is Path Valid
+	// TODO: Smooth Path
+	// TODO: Path Length
 
 	#endregion
 
@@ -1095,7 +1203,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private void MarkGraphDirty()
 	{
-		// TODO: MarkGraphDirty
+		_graphDirty = true;
 	}
 
 	private void ResolveAudioProxyRef()
@@ -1122,9 +1230,43 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return result == null;
 	}
 
+	private Vector3 ResolveNodeOrigin()
+	{
+		if (OriginOverride != null) return OriginOverride.GlobalPosition;
+		return GlobalPosition;
+	}
+
+	private void CheckRebuildSamples()
+	{
+		// TODO: CheckRebuildSamples
+	}
+	
+	private void UpdateAudioProxy(double delta)
+	{
+		// TODO: UpdateAudioProxy
+	}
+
 	#endregion
 
 	#region Editor Config
+
+	private void EditorReady()
+	{
+		if (!PreviewPathingInEditor) { SetProcess(true); ResetAudioProxyToOrigin(); }
+		UpdateConfigurationWarnings();
+		UpdateAudioProxy(0.0f);
+	}
+
+	private bool IsEditorSelected()
+	{
+		if (!Engine.IsEditorHint()) return false;
+		Godot.Collections.Array<Node> selections = Plugin.GetEditorSelected();
+		foreach (Node n in selections)
+		{
+			if (n == this) return true;
+		}
+		return false;
+	}
 
 	public override void _Notification(int what)
 	{
