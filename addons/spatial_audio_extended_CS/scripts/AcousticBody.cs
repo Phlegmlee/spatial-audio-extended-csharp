@@ -112,8 +112,14 @@ public partial class AcousticBody : Node
 			// Unsub then resub, unsub will NOT cause 
 			// failure if not already subbed, this is
 			// safer and faster than using IsConnected()
-			parent.ChildOrderChanged -= OnSiblingsChanged;
-			parent.ChildOrderChanged += OnSiblingsChanged;
+			//parent.ChildOrderChanged -= OnSiblingsChanged;
+
+			// NOTE: The above does not work due to a Godot quirk.
+			// Unsub then resub method does not work because Godot
+			// treats it as an error unlike C#, so, IsConnected being
+			// used...unfourtunatly.
+			if (!parent.IsConnected(Node.SignalName.ChildOrderChanged, Callable.From(OnSiblingsChanged)))
+			{ parent.ChildOrderChanged += OnSiblingsChanged; }
 		}
 
 		base._Ready();
