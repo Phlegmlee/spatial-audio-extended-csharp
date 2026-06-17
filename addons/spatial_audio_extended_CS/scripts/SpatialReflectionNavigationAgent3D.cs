@@ -1181,29 +1181,178 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		// TODO: SetFailedPath
 	}
 
-	// TODO: Heap Push
-	// TODO: Heap Pop
-	// TODO: Neighbors Of
-	// TODO: Estimate Cost
-	// TODO: Compute Move Cost
-	// TODO: Id to point
-	// TODO: Try Resuse Cached Path
-	// TODO: Is Path Valid
-	// TODO: Smooth Path
-	// TODO: Path Length
+	private void HeapPush()
+	{
+		// TODO: Heap Push
+	}
+
+	private void HeapPop()
+	{
+		// TODO: Heap Pop
+	}
+
+	private void EstimateCost()
+	{
+		// TODO: Estimate Cost
+	}
+	
+	private void NeighborsOf()
+	{
+		// TODO: Neighbors Of
+	}
+
+	private void ComputeMoveCost()
+	{
+		// TODO: Compute Move Cost
+	}
+
+	private void IdToPoint()
+	{
+		// TODO: Id to point
+	}
+
+	private void TryResuseCachedPath()
+	{
+		// TODO: Try Resuse Cached Path
+	}
+	
+	private bool IsPathValid()
+	{
+		// TODO: Is Path Valid
+		return false;
+	}
+
+	private void SmoothPath()
+	{
+		// TODO: Smooth Path
+	}
+	
+	private float GetPathLength()
+	{
+		// TODO: Path Length
+		return 0.0f;
+	}
 
 	#endregion
 
-	#region Utils
+	#region Utils - Graph
+
+	// Rebuild graph if needed.
+	private void CheckRebuildGraph()
+	{
+
+	}
+
+	private void BuildGraphRandomSamples(PhysicsDirectSpaceState3D space, List<Rid> exclusions)
+	{
+		// TODO: BuildGraphRandom
+	}
+
+	private void BuildGraphReachableScan(PhysicsDirectSpaceState3D space, List<Rid> exclusions)
+	{
+		// TODO: BuildGraphReachable
+	}
+
+	private void AddEdge(int a, int b)
+	{
+		// TODO: AddEdge
+	}
+
+	private bool EdgeExists(int a, int b)
+	{
+		// TODO: EdgeExists
+		return false;
+	}
+
+	private int[] FindDynamicLinks()
+	{
+		List<int> result = [];
+
+		// TODO: FindDynamicLinks
+
+		return [.. result];
+	}
+
+	#endregion
+
+	#region Utils - Nav
 
 	private void ApplyNavigationProfilePreset()
 	{
-		// TODO: ApplyNavigationProfilePreset
+		switch (NavigationProfile)
+		{
+			case NavigationProfileEnum.Custom:
+				return;
+
+			case NavigationProfileEnum.OpenAreas:
+				UseReachableScan = false;
+				SamplePointCount = 128;
+				MaxConnectionDistance = 11.0f;
+				GraphNeighborLimit = 12;
+				DynamicConnectionLimit = 8;
+				DynamicCanidateMultiplier = 3;
+				EdgeClearanceChecks = 0;
+				GraphRecenterDistance = 3.5f;
+				ScannedMaxExtent = 0;
+				break;
+
+			case NavigationProfileEnum.Hallways:
+				UseReachableScan = true;
+				ScanNeighborMode = ScanNeighborModeEnum.Axis_6;
+				ScanCellSize = 0.9f;
+				ScanedCellMax = 4096;
+				ScannedMaxExtent = 28;
+				ScanCellInset = 0.10f;
+				MaxConnectionDistance = 8.0f;
+				GraphNeighborLimit = 10;
+				DynamicConnectionLimit = 6;
+				DynamicCanidateMultiplier = 4;
+				EdgeClearanceChecks = 1;
+				GraphRecenterDistance = 1.5f;
+				break;
+		}
+
+		_hasLastSolve = false;
+		MarkGraphDirty();
+
+		if (IsInsideTree() && !Engine.IsEditorHint()) RecomputePath();
 	}
+
+	// Rebuild navigation samples if needed.
+	private void CheckRebuildSamples()
+	{
+		// TODO: CheckRebuildSamples
+	}
+
+	private List<Rid> BuildExclusions(Node3D target)
+	{
+		List<Rid> result = [];
+
+		// TODO: BuildExclusions
+
+		return result;
+	}
+
+	private void AppendExclusionsRecursive(Node node, List<Rid> result, Dictionary<Rid, bool> seen)
+	{
+		
+	}
+
+	#endregion
+
+	#region Utils - Helpers
 
 	private void MarkGraphDirty()
 	{
 		_graphDirty = true;
+	}
+
+	private void CommitSolveState(Vector3 origin, Vector3 target)
+	{
+		_lastSolveOrigin = origin;
+		_lastSolveTarget = target;
+		_hasLastSolve = true;
+		_timeSinceRecompute = 0.0;
 	}
 
 	private void ResolveAudioProxyRef()
@@ -1214,6 +1363,12 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private void ResetAudioProxyToOrigin()
 	{
 		// TODO: ResetAudioProxyToOrigin
+	}
+
+	private Vector3 GetProxyTarget()
+	{
+		// TODO: Get proxy world target
+		return Vector3.Zero;
 	}
 
 	private SpatialAudioPlayer3D FindSpatialAudioPlayer()
@@ -1227,7 +1382,15 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		SpatialAudioPlayer3D result = FindSpatialAudioPlayer();
 
-		return result == null;
+		// TODO: Is spatial audio player found
+
+		return result != null;
+	}
+
+	private Node FindCollisionAncestor(Node node)
+	{
+		// TODO: FindCollisionAncestor
+		return null;
 	}
 
 	private Vector3 ResolveNodeOrigin()
@@ -1236,14 +1399,57 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return GlobalPosition;
 	}
 
-	private void CheckRebuildSamples()
-	{
-		// TODO: CheckRebuildSamples
-	}
-	
 	private void UpdateAudioProxy(double delta)
 	{
 		// TODO: UpdateAudioProxy
+	}
+
+	private Vector3 ApplyProxySpringTarget()
+	{
+		// TODO: Apply Proxy Spring Arm Target
+		return Vector3.Zero;
+	}
+
+	/// <summary>
+	/// Get a point along the path from the end.
+	/// </summary>
+	private Vector3 GetPointAlongPath()
+	{
+		// TODO: Get point along path
+		return Vector3.Zero;
+	}
+
+	/// <summary>
+	/// Get the distance from start to a point on path.
+	/// </summary>
+	private float GetDistanceStartToPoint()
+	{
+		// TODO: Get distance from start to point on path
+		return 0.0f;
+	}
+
+	/// <summary>
+	/// Update the reflection audio modulation.
+	/// </summary>
+	private void UpdateRefMod()
+	{
+		// TODO: Update reflection audio modulation
+	}
+
+	/// <summary>
+	/// Apply the reflection volume offset dB.
+	/// </summary>
+	private void ApplyRefVolOffset()
+	{
+		// TODO: Apply the reflection volume offset dB.
+	}
+	
+	/// <summary>
+	/// Update proxy occlusion transition support.
+	/// </summary>
+	private void UpdateProxyOccl()
+	{
+		// TODO: Update proxy occlusion transition support.
 	}
 
 	#endregion
@@ -1304,6 +1510,11 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	#region Debug
 
 	// TODO: Debug
+
+	private void UpdateExtNavDebug()
+	{
+		// TODO: Update external navigation debug.
+	}
 
 	#endregion
 }
