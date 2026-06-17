@@ -1511,6 +1511,36 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	// TODO: Debug
 
+	private void SharedDebugMesh()
+	{
+		// TODO: SharedDebugMesh
+	}
+
+	private void DrawDebug(bool editorPreview = false)
+	{
+		// TODO: Draw debug
+	}
+
+	private void DrawPolyline()
+	{
+		// TODO: Draw polyline
+	}
+
+	private void DrawSegment()
+	{
+		// TODO: Draw segment
+	}
+
+	private void DrawCross()
+	{
+		// TODO: DrawCross
+	}
+	
+	private void DrawWireframeSphere()
+	{
+		// TODO: Draw wireframe sphere
+	}
+
 	private void UpdateExtNavDebug()
 	{
 		// TODO: Update external navigation debug.
