@@ -4,12 +4,12 @@
 [ext_resource type="PackedScene" uid="uid://d3oqghpr6j88l" path="res://examples/effects/BigExplosionScene.tscn" id="1_f7sj4"]
 [ext_resource type="AudioStream" uid="uid://dt8g88e04qhn8" path="res://examples/assets/sounds/alice_01_carroll_128kb.mp3" id="1_oe2cu"]
 [ext_resource type="Script" uid="uid://2fcswtu60jo2" path="res://addons/spatial_audio_extended_CS/scripts/AcousticBody.cs" id="2_naqvs"]
-[ext_resource type="Resource" uid="uid://63th1rw80rpr" path="res://addons/spatial_audio_extended_CS/materials/brick.tres" id="3_naqvs"]
 [ext_resource type="PackedScene" uid="uid://7njco7xo0xkb" path="res://examples/character/PlayerEntity.tscn" id="4_pw243"]
 [ext_resource type="PackedScene" uid="uid://cw0xah68t6ekg" path="res://examples/objects/speaker.tscn" id="4_w7hkg"]
 [ext_resource type="Script" uid="uid://ckl5ow8qws0hb" path="res://addons/spatial_audio_extended_CS/scripts/SpatialAudioDebug.cs" id="4_xyviw"]
 [ext_resource type="AudioStream" uid="uid://dvt0juphl2u81" path="res://examples/assets/sounds/jazz/tatamusic-jazz-jazz-music-485401.mp3 (piano).mp3" id="6_hjuh8"]
 [ext_resource type="AudioStream" uid="uid://bkyht2su4vcqt" path="res://examples/assets/sounds/jazz/tatamusic-jazz-jazz-music-485401.mp3 (bass).mp3" id="7_5a36c"]
+[ext_resource type="Resource" uid="uid://denbaavr63xlv" path="res://addons/spatial_audio_extended_CS/materials/acoustic_foam.tres" id="7_f7sj4"]
 [ext_resource type="AudioStream" uid="uid://c8oidjqmx3yvl" path="res://examples/assets/sounds/jazz/tatamusic-jazz-jazz-music-485401.mp3 (drum).mp3" id="8_naqvs"]
 [ext_resource type="AudioStream" uid="uid://nxhtkrd12cqn" path="res://examples/assets/sounds/jazz/tatamusic-jazz-jazz-music-485401.mp3 (electric_guitar).mp3" id="9_f7sj4"]
 [ext_resource type="AudioStream" uid="uid://c4qmrek4m5y2r" path="res://examples/assets/sounds/jazz/tatamusic-jazz-jazz-music-485401.mp3 (synthesizer).mp3" id="10_rrq2r"]
@@ -84,15 +84,15 @@ data = PackedVector3Array(-0.5, -6, -24.5, -0.5, -5.5, -1.25, -0.5, -6, 24.5, -0
 
 [sub_resource type="Curve" id="Curve_03i7d"]
 
-[sub_resource type="ViewportTexture" id="ViewportTexture_teuft"]
+[sub_resource type="ViewportTexture" id="ViewportTexture_f7sj4"]
 viewport_path = NodePath("SubViewport")
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kneti"]
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rrq2r"]
 resource_local_to_scene = true
 transparency = 1
 shading_mode = 0
 albedo_color = Color(1, 1, 1, 0.752941)
-albedo_texture = SubResource("ViewportTexture_teuft")
+albedo_texture = SubResource("ViewportTexture_f7sj4")
 
 [node name="Main" type="Node3D" unique_id=910781270]
 
@@ -126,19 +126,6 @@ shape = SubResource("ConcavePolygonShape3D_dvvjd")
 [node name="Speaker" parent="U-Wall" unique_id=2038329287 instance=ExtResource("4_w7hkg")]
 transform = Transform3D(1, 0, 0, 0, -4.371139e-08, 1, 0, -1, -4.371139e-08, -5, 0, 0)
 
-[node name="U-Wall2" type="StaticBody3D" parent="U-Wall" unique_id=1655337601]
-transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
-
-[node name="U-Wall_mesh" type="MeshInstance3D" parent="U-Wall/U-Wall2" unique_id=1673403904]
-mesh = SubResource("ArrayMesh_dvvjd")
-
-[node name="CollisionShape3D2" type="CollisionShape3D" parent="U-Wall/U-Wall2" unique_id=1801330669]
-shape = SubResource("ConvexPolygonShape3D_w7hkg")
-
-[node name="AcousticBody" type="Node" parent="U-Wall/U-Wall2" unique_id=1444255497]
-script = ExtResource("2_naqvs")
-AcousticMaterial = ExtResource("3_naqvs")
-
 [node name="SpatialAudioPlayer3D" type="AudioStreamPlayer3D" parent="U-Wall" unique_id=1620569877]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 0)
 stream = ExtResource("1_oe2cu")
@@ -155,7 +142,20 @@ script = ExtResource("4_xyviw")
 
 [node name="AcousticBody" type="Node" parent="U-Wall" unique_id=29445706]
 script = ExtResource("2_naqvs")
-AcousticMaterial = ExtResource("3_naqvs")
+AcousticMaterial = ExtResource("7_f7sj4")
+
+[node name="U-Wall2" type="StaticBody3D" parent="U-Wall" unique_id=1655337601]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+
+[node name="U-Wall_mesh" type="MeshInstance3D" parent="U-Wall/U-Wall2" unique_id=1673403904]
+mesh = SubResource("ArrayMesh_dvvjd")
+
+[node name="CollisionShape3D2" type="CollisionShape3D" parent="U-Wall/U-Wall2" unique_id=1801330669]
+shape = SubResource("ConvexPolygonShape3D_w7hkg")
+
+[node name="AcousticBody" type="Node" parent="U-Wall/U-Wall2" unique_id=1444255497]
+script = ExtResource("2_naqvs")
+AcousticMaterial = ExtResource("7_f7sj4")
 
 [node name="JazzBar" type="CSGBox3D" parent="." unique_id=1658483937]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 75, 0, 0)
@@ -304,7 +304,7 @@ MaxRaycastDistance = 75.0
 IgnoreFloor = true
 
 [node name="quad" parent="BigExplosion/Button/3D_GUI" parent_id_path=PackedInt32Array(991039000, 1504556421) index="1" unique_id=1505330341]
-surface_material_override/0 = SubResource("StandardMaterial3D_kneti")
+surface_material_override/0 = SubResource("StandardMaterial3D_rrq2r")
 
 [editable path="BigExplosion"]
 [editable path="BigExplosion/Button/3D_GUI"]

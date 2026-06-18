@@ -7,7 +7,7 @@ public partial class Plugin : EditorPlugin
 {
 	private Button AcousticButton = null;
 
-	EditorInterface editorInterface = null;
+	private static EditorInterface editorInterface = null;
 	private static Godot.Collections.Array<Node> EditorSelections = [];
 
 	public override void _EnterTree()
@@ -111,6 +111,11 @@ public partial class Plugin : EditorPlugin
 	public static Godot.Collections.Array<Node> GetEditorSelected()
 	{
 		return EditorSelections;
+	}
+
+	public static Viewport GetEditorViewport3D()
+	{
+		return editorInterface.GetEditorViewport3D();
 	}
 }
 #endif

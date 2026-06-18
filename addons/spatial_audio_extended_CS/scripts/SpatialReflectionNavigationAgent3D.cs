@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 namespace SpatialAudioCS;
@@ -525,7 +526,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	///  Maximum movement of the target before cached path reuse is rejected.
 	/// </summary>
 	[Export(PropertyHint.Range, "0.0f, 16.0f, 0.05f, suffix:m")]
-	public float ReuseTarTolerance
+	public float ReuseTargetTolerance
 	{
 		get => _reuseTarTol;
 		set => _reuseTarTol = value;
@@ -1045,8 +1046,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private List<Vector3[]> _currentPath = [];
 	private bool _hasValidPath = false;
 	private bool _isDirectPath = false;
-	private Vector3 _lastOrigin = Vector3.Zero;
-	private Vector3 _lastTarget = Vector3.Zero;
+	private Vector3 _lastWorldOrigin = Vector3.Zero;
+	private Vector3 _lastWorldTarget = Vector3.Zero;
 	private Vector3 _lastSolveOrigin = Vector3.Zero;
 	private Vector3 _lastSolveTarget = Vector3.Zero;
 	private bool _hasLastSolve = false;
@@ -1054,9 +1055,10 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private PhysicsRayQueryParameters3D _rayQuery;
 	private PhysicsShapeQueryParameters3D _shapeQuery;
 
-	// TODO: Internal
-
+	private Dictionary<string, bool> _segVisCache = [];
+	private Dictionary<Vector3I, bool> _pFreeCache = [];
 	private bool _exclusionsDirty = true;
+	List<Rid> _cachedBaseExclusions = [];
 
 	private readonly string[] _NAV_PROFILE_CUSTOM_ONLY_PROPS = [
 		"skip_recompute_when_static",
@@ -1099,6 +1101,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	#region Gameplay Logic
 
+	/// <inheritdoc />
 	public override void _Ready()
 	{
 		if (Engine.IsEditorHint()) EditorReady();
@@ -1126,6 +1129,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		RecomputePath();
 	}
 
+	/// <inheritdoc />
 	public override void _Process(double delta)
 	{
 		bool editorPreview = Engine.IsEditorHint() && !PreviewPathingInEditor;
@@ -1138,7 +1142,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			{ _timeSinceRecompute += delta; _timeAccum += delta; }
 			else { _timeAccum = 0.0; RecomputePath(); }
 
-			// TODO: DrawDebug(editorSelected);
+			DrawDebug(editorSelected);
 
 			return;
 		}
@@ -1148,7 +1152,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		if (_timeAccum >= UpdateInterval)
 		{ _timeAccum = 0.0; RecomputePath(); }
 		UpdateAudioProxy(delta);
-		// TODO: DrawDebug(false);
+		DrawDebug(false);
 	}
 
 	// TODO: Gameplay Logic
@@ -1159,12 +1163,101 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private void RecomputePath()
 	{
-		// TODO: RecomputePath
+		World3D world = GetWorld3D();
+		if (world == null) return;
+
+		Node3D target = GetTargetNode();
+		if (target == null)
+		{ SetFailedPath(Vector3.Zero, Vector3.Zero, false); return; }
+
+		Vector3 worldOrigin = ResolveWorldOrigin();
+		Vector3 worldTarget = target.GlobalPosition;
+		_lastWorldOrigin = worldOrigin;
+		_lastWorldTarget = worldTarget;
+
+		if (SkipRecomputeWhenStatic && _hasLastSolve && !_graphDirty)
+		{
+			float originDelta = worldOrigin.DistanceTo(_lastSolveOrigin);
+			float targetDelta = worldTarget.DistanceTo(_lastSolveTarget);
+
+			if
+			(
+				originDelta < RecomputeOriginThreshold && targetDelta < RecomputeTargetThreshold
+				&&
+				(StaticRecomputeInterval <= 0.0f || _timeSinceRecompute < StaticRecomputeInterval)
+			) return;
+		}
+
+		PhysicsDirectSpaceState3D space = world.DirectSpaceState;
+		Godot.Collections.Array<Rid> exclusions = BuildExclusions(target);
+		_segVisCache.Clear();
+		_pFreeCache.Clear();
+
+		if (GetFirstHit(space, worldOrigin, worldTarget, exclusions).Count == 0)
+		{
+			SetPath([worldOrigin, worldTarget], true);
+			CommitSolveState(worldOrigin, worldTarget);
+			return;
+		}
+
+		if (ReuseLastPath)
+		{
+			Vector3[] reused = TryReuseCachedPath(space, worldOrigin, worldTarget, exclusions);
+			if (reused.Length >= 2)
+			{
+				SetPath(reused, false);
+				CommitSolveState(worldOrigin, worldTarget);
+				return;
+			}
+		}
+
+		CheckRebuildGraph(space, worldOrigin, exclusions);
+		if (_graphPoints.Count == 0)
+		{
+			SetFailedPath(worldOrigin, worldTarget, true);
+			CommitSolveState(worldOrigin, worldTarget);
+			return;
+		}
+
+		int[] startLinks = FindDynamicLinks(space, worldOrigin, worldTarget, exclusions);
+		int[] goalLinks = FindDynamicLinks(space, worldTarget, worldOrigin, exclusions);
+		if (startLinks.Length == 0 || goalLinks.Length == 0)
+		{
+			SetFailedPath(worldOrigin, worldTarget, true);
+			CommitSolveState(worldOrigin, worldTarget);
+			return;
+		}
+
+		List<Vector3> graphPath = FindPathGreedyAStar(worldOrigin, worldTarget, startLinks, goalLinks);
+		if (SmoothPathWithVisiblity && graphPath.Count > 2) graphPath = SmoothPath(space, graphPath, exclusions);
+
+		if (graphPath.Count >= 2) SetPath([.. graphPath], false);
+		else SetFailedPath(worldOrigin, worldTarget, true);
+
+		CommitSolveState(worldOrigin, worldTarget);
 	}
 
-	private Vector3[] FindPathGreedyAStar()
+	private Godot.Collections.Dictionary GetFirstHit
+	(
+		PhysicsDirectSpaceState3D space,
+		Vector3 from,
+		Vector3 to,
+		Godot.Collections.Array<Rid> exclusions
+	)
 	{
-		Vector3[] path = [];
+		_rayQuery.From = from;
+		_rayQuery.To = to;
+		_rayQuery.Exclude = exclusions;
+		_rayQuery.CollisionMask = CollisionMask;
+		_rayQuery.CollideWithAreas = CollideWithAreas;
+		_rayQuery.CollideWithBodies = CollideWithBodies;
+		_rayQuery.HitFromInside = true;
+		return space.IntersectRay(_rayQuery);
+	}
+
+	private List<Vector3> FindPathGreedyAStar(Vector3 worldOrigin, Vector3 worldTarget, int[] startLinks, int[] goalLinks)
+	{
+		List<Vector3> path = [];
 
 		// TODO: FindPathGreedyAStar
 
@@ -1211,23 +1304,134 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		// TODO: Id to point
 	}
 
-	private void TryResuseCachedPath()
+	private Vector3[] TryReuseCachedPath
+	(
+		PhysicsDirectSpaceState3D space,
+		Vector3 worldOrigin,
+		Vector3 worldTarget,
+		Godot.Collections.Array<Rid> exclusions
+	)
 	{
-		// TODO: Try Resuse Cached Path
+		List<Vector3> result = [];
+		if (_cachedWaypoints.IsEmpty()) return [.. result];
+		if (worldOrigin.DistanceTo(_cachedOrigin) > ReuseOriginTolerance) return [.. result];
+		if (worldTarget.DistanceTo(_cachedTarget) > ReuseTargetTolerance) return [.. result];
+
+		result.Add(worldOrigin);
+
+		foreach (Vector3 p in _cachedWaypoints) result.Add(p);
+
+		result.Add(worldTarget);
+
+		if (IsPathValid(space, result, exclusions))
+		{
+			if (SmoothPathWithVisiblity && result.Count > 2) result = SmoothPath(space, result, exclusions);
+			float resultLen = GetPathLength(result);
+			float directDist = worldOrigin.DistanceTo(worldTarget);
+			if (_cachedPathLen > 0.0f && resultLen > _cachedPathLen * 1.20f) return [];
+			if (resultLen > directDist * ReuseMaxDetourRatio) return [];
+			return [.. result];
+		}
+
+		return [];
 	}
-	
-	private bool IsPathValid()
+
+	private bool IsPathValid
+	(
+		PhysicsDirectSpaceState3D space,
+		List<Vector3> worldPath,
+		Godot.Collections.Array<Rid> exclusions
+	)
 	{
-		// TODO: Is Path Valid
+		if (worldPath.Count < 2) return false;
+		for (int i = 0; i < worldPath.Count - 1; i++)
+		{
+			if (!IsSegmentClear(space, worldPath[i], worldPath[i + 1], exclusions)) return false;
+		}
+		return true;
+	}
+
+	private bool IsSegmentClear
+	(
+		PhysicsDirectSpaceState3D space,
+		Vector3 from,
+		Vector3 to,
+		Godot.Collections.Array<Rid> exclusions
+	)
+	{
+		if (from.IsEqualApprox(to)) return true;
+
+		string key = SegmentKey(from, to);
+
+		if (_segVisCache.ContainsKey(key)) return _segVisCache[key];
+
+		bool visible = true;
+		Godot.Collections.Dictionary hit = GetFirstHit(space, from, to, exclusions);
+		if (!(hit.Count == 0)) visible = false;
+		else if (EdgeClearanceChecks > 0)
+		{
+			for (int i = 0; i < EdgeClearanceChecks; i++)
+			{
+				float t = i + 1 / EdgeClearanceChecks + 1;
+				Vector3 p = new
+				(
+					float.Lerp(from.X, to.X, t),
+					float.Lerp(from.Y, to.Y, t),
+					float.Lerp(from.Z, to.Z, t)
+				);
+				if (!IsPointFree(space, p, exclusions)) { visible = false; break; }
+			}
+		}
+
+		_segVisCache[key] = visible;
+		return visible;
+	}
+
+	private string SegmentKey(Vector3 a, Vector3 b)
+	{
+		Vector3I ka = PointKey(a);
+		Vector3I kb = PointKey(b);
+
+		if (ka.X > kb.X || (ka.X == kb.X && (ka.Y > kb.Y || (ka.Y == kb.Y && ka.Z > kb.Z))))
+		{
+			(kb, ka) = (ka, kb);
+		}
+		return $"{ka.X}|{ka.Y}|{ka.Z}>{kb.X}|{kb.Y}|{kb.Z}";
+	}
+
+	private Vector3I PointKey(Vector3 point)
+	{
+		Vector3I result = new
+		(
+			(int)Math.Round(point.X * 100.0),
+			(int)Math.Round(point.Y * 100.0),
+			(int)Math.Round(point.Z * 100.0)
+		);
+
+		return result;
+	}
+
+	private bool IsPointFree
+	(
+		PhysicsDirectSpaceState3D space,
+		Vector3 p,
+		Godot.Collections.Array<Rid> exclusions)
+	{
+		// TODO: IsPointFree
 		return false;
 	}
 
-	private void SmoothPath()
+	private List<Vector3> SmoothPath
+	(
+		PhysicsDirectSpaceState3D space,
+		List<Vector3> result,
+		Godot.Collections.Array<Rid> exclusions)
 	{
 		// TODO: Smooth Path
+		return result;
 	}
 	
-	private float GetPathLength()
+	private float GetPathLength(List<Vector3> result)
 	{
 		// TODO: Path Length
 		return 0.0f;
@@ -1238,17 +1442,24 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	#region Utils - Graph
 
 	// Rebuild graph if needed.
-	private void CheckRebuildGraph()
+	private void CheckRebuildGraph
+	(
+		PhysicsDirectSpaceState3D space,
+		Vector3 worldOrigin,
+		Godot.Collections.Array<Rid> exclusions
+	)
 	{
 
 	}
 
-	private void BuildGraphRandomSamples(PhysicsDirectSpaceState3D space, List<Rid> exclusions)
+	private void BuildGraphRandomSamples
+	(PhysicsDirectSpaceState3D space, List<Rid> exclusions)
 	{
 		// TODO: BuildGraphRandom
 	}
 
-	private void BuildGraphReachableScan(PhysicsDirectSpaceState3D space, List<Rid> exclusions)
+	private void BuildGraphReachableScan
+	(PhysicsDirectSpaceState3D space, List<Rid> exclusions)
 	{
 		// TODO: BuildGraphReachable
 	}
@@ -1264,7 +1475,12 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return false;
 	}
 
-	private int[] FindDynamicLinks()
+	private int[] FindDynamicLinks
+	(
+		PhysicsDirectSpaceState3D space,
+		Vector3 worldOrigin,
+		Vector3 worldTarget,
+		Godot.Collections.Array<Rid> exclusions)
 	{
 		List<int> result = [];
 
@@ -1324,9 +1540,9 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		// TODO: CheckRebuildSamples
 	}
 
-	private List<Rid> BuildExclusions(Node3D target)
+	private Godot.Collections.Array<Rid> BuildExclusions(Node3D target)
 	{
-		List<Rid> result = [];
+		Godot.Collections.Array<Rid> result = [];
 
 		// TODO: BuildExclusions
 
@@ -1393,6 +1609,24 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return null;
 	}
 
+	private Vector3 ResolveWorldOrigin()
+	{
+		switch (OriginMode)
+		{
+			case OriginModeEnum.NodePosition:
+				return ResolveNodeOrigin();
+
+			case OriginModeEnum.NodeWithLocalOffset:
+				Node3D owner = this;
+				if (OriginOverride != null) owner = OriginOverride;
+				return owner.ToGlobal(OriginLocalOffset);
+
+			case OriginModeEnum.FixedWorldPosition:
+				return FixedWorldOrigin;
+		}
+		return GlobalPosition;
+	}
+
 	private Vector3 ResolveNodeOrigin()
 	{
 		if (OriginOverride != null) return OriginOverride.GlobalPosition;
@@ -1443,13 +1677,26 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		// TODO: Apply the reflection volume offset dB.
 	}
-	
+
 	/// <summary>
 	/// Update proxy occlusion transition support.
 	/// </summary>
 	private void UpdateProxyOccl()
 	{
 		// TODO: Update proxy occlusion transition support.
+	}
+	
+	private Node3D GetTargetNode()
+	{
+		if (TargetOverride != null) return TargetOverride;
+
+		if (Engine.IsEditorHint())
+		{
+			Viewport vp = Plugin.GetEditorViewport3D();
+			if (vp != null) return vp.GetCamera3D();
+			return null;
+		}
+		return GetViewport().GetCamera3D();
 	}
 
 	#endregion
@@ -1474,6 +1721,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return false;
 	}
 
+	/// <inheritdoc />
 	public override void _Notification(int what)
 	{
 		if (what == NotificationChildOrderChanged)
@@ -1483,6 +1731,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		}
 	}
 
+	/// <inheritdoc />
 	public override string[] _GetConfigurationWarnings()
 	{
 		List<string> warnings = [];
@@ -1498,6 +1747,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return [.. warnings];
 	}
 
+	/// <inheritdoc />
 	public override void _ValidateProperty(Godot.Collections.Dictionary property)
 	{
 		// TODO: _ValidateProperty
