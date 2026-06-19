@@ -1261,6 +1261,20 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 		// TODO: FindPathGreedyAStar
 
+		Dictionary<int, bool> goalSet = [];
+		foreach (int idx in goalLinks) goalSet[idx] = true;
+
+		List<List<float>> frontier = [];
+		HeapPush(frontier, [0.0f, 0]); // [fScore, nodeId]
+
+		Dictionary<uint, float> travelCost = new() { { 0, 0.0f }, };
+		Dictionary<uint, int> breadcrumb = new() { { 0, -1 }, };
+
+		while (!(frontier.Count == 0))
+		{
+			// TODO: Get path based on travel cost and neighbors
+		}
+
 		return path;
 	}
 
@@ -1274,12 +1288,12 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		// TODO: SetFailedPath
 	}
 
-	private void HeapPush()
+	private void HeapPush(List<List<float>> heap, List<float> item)
 	{
 		// TODO: Heap Push
 	}
 
-	private void HeapPop()
+	private void HeapPop(List<List<float>> heap)
 	{
 		// TODO: Heap Pop
 	}
