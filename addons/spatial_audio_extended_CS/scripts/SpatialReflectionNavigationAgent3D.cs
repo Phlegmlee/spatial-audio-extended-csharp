@@ -1228,10 +1228,10 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			return;
 		}
 
-		List<Vector3> graphPath = FindPathGreedyAStar(worldOrigin, worldTarget, startLinks, goalLinks);
-		if (SmoothPathWithVisiblity && graphPath.Count > 2) graphPath = SmoothPath(space, graphPath, exclusions);
+		Vector3[] graphPath = FindPathGreedyAStar(worldOrigin, worldTarget, startLinks, goalLinks);
+		if (SmoothPathWithVisiblity && graphPath.Length > 2) graphPath = SmoothPath(space, graphPath, exclusions);
 
-		if (graphPath.Count >= 2) SetPath([.. graphPath], false);
+		if (graphPath.Length >= 2) SetPath([.. graphPath], false);
 		else SetFailedPath(worldOrigin, worldTarget, true);
 
 		CommitSolveState(worldOrigin, worldTarget);
@@ -1255,10 +1255,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return space.IntersectRay(_rayQuery);
 	}
 
-	private List<Vector3> FindPathGreedyAStar(Vector3 worldOrigin, Vector3 worldTarget, int[] startLinks, int[] goalLinks)
+	private Vector3[] FindPathGreedyAStar(Vector3 worldOrigin, Vector3 worldTarget, int[] startLinks, int[] goalLinks)
 	{
-		List<Vector3> path = [];
-
 		// TODO: FindPathGreedyAStar
 
 		Dictionary<int, bool> goalSet = [];
@@ -1267,15 +1265,34 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		List<List<float>> frontier = [];
 		HeapPush(frontier, [0.0f, 0]); // [fScore, nodeId]
 
-		Dictionary<uint, float> travelCost = new() { { 0, 0.0f }, };
-		Dictionary<uint, int> breadcrumb = new() { { 0, -1 }, };
+		Dictionary<int, float> travelCost = new() { { 0, 0.0f }, };
+		Dictionary<int, int> breadcrumb = new() { { 0, -1 }, };
 
 		while (!(frontier.Count == 0))
 		{
-			// TODO: Get path based on travel cost and neighbors
+			List<float> best = HeapPop(frontier);
+			float bestF = best[0];
+			float bestId = best[1];
+
+			// TODO: get path using travel cost and neigbors
 		}
 
-		return path;
+		if (!travelCost.ContainsKey(1)) return [];
+
+		List<int> idPath = [1];
+		while (idPath[idPath.Count - 1] != 0)
+		{
+			idPath.Add(breadcrumb[idPath[^1]]);
+		}
+		idPath.Reverse();
+
+		List<Vector3> worldPath = [];
+		foreach (int id in idPath)
+		{
+			worldPath.Add(IdToPoint(id, worldOrigin, worldTarget));
+		}
+
+		return [.. worldPath];
 	}
 
 	private void SetPath(Vector3[] path, bool direct)
@@ -1290,12 +1307,31 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private void HeapPush(List<List<float>> heap, List<float> item)
 	{
-		// TODO: Heap Push
+		heap.Add(item);
+		int i = heap.Count - 1;
+		do
+		{
+			int p = (i - 1) >> 1;
+			if (heap[p][0] <= heap[i][0]) break;
+			(heap[i], heap[p]) = (heap[p], heap[i]);
+			i = p;
+		}
+		while (i > 0);
 	}
 
-	private void HeapPop(List<List<float>> heap)
+	private List<float> HeapPop(List<List<float>> heap)
 	{
-		// TODO: Heap Pop
+		List<float> top = heap[0];
+		List<float> last = heap[^1];
+		heap.RemoveAt(heap.Count - 1);
+
+		if (!(heap.Count == 0))
+		{
+			heap[0] = last;
+			// TODO: There is a while true here in gdscript, I don't like it
+		}
+
+		return top;
 	}
 
 	private void EstimateCost()
@@ -1313,9 +1349,10 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		// TODO: Compute Move Cost
 	}
 
-	private void IdToPoint()
+	private Vector3 IdToPoint(int id, Vector3 worldOrigin, Vector3 worldTarget)
 	{
 		// TODO: Id to point
+		return Vector3.Zero;
 	}
 
 	private Vector3[] TryReuseCachedPath
@@ -1337,14 +1374,16 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 		result.Add(worldTarget);
 
+		Vector3[] packedResult = [.. result];
+
 		if (IsPathValid(space, result, exclusions))
 		{
-			if (SmoothPathWithVisiblity && result.Count > 2) result = SmoothPath(space, result, exclusions);
-			float resultLen = GetPathLength(result);
+			if (SmoothPathWithVisiblity && packedResult.Length > 2) packedResult = SmoothPath(space, packedResult, exclusions);
+			float resultLen = GetPathLength(packedResult);
 			float directDist = worldOrigin.DistanceTo(worldTarget);
 			if (_cachedPathLen > 0.0f && resultLen > _cachedPathLen * 1.20f) return [];
 			if (resultLen > directDist * ReuseMaxDetourRatio) return [];
-			return [.. result];
+			return packedResult;
 		}
 
 		return [];
@@ -1435,17 +1474,17 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return false;
 	}
 
-	private List<Vector3> SmoothPath
+	private Vector3[] SmoothPath
 	(
 		PhysicsDirectSpaceState3D space,
-		List<Vector3> result,
+		Vector3[] result,
 		Godot.Collections.Array<Rid> exclusions)
 	{
 		// TODO: Smooth Path
 		return result;
 	}
 	
-	private float GetPathLength(List<Vector3> result)
+	private float GetPathLength(Vector3[] packedResult)
 	{
 		// TODO: Path Length
 		return 0.0f;
