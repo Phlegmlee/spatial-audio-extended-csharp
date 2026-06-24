@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection.Metadata.Ecma335;
-using System.Text.RegularExpressions;
 using Godot;
 namespace SpatialAudioCS;
 
@@ -1279,7 +1277,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 				continue;
 			}
 
-			float expectedF = currentG + EstimateCost(IdToPoint(bestId, worldOrigin, worldTarget), worldTarget);
+			float expectedF = currentG + EstimateCost(IdToPoint((int)bestId, worldOrigin, worldTarget), worldTarget);
 			if (bestF > expectedF + 0.0001f) continue;
 
 			if (bestId == 1) break;
@@ -1289,7 +1287,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			foreach (int n in neighbors)
 			{
 				float moveCost = ComputeMoveCost(
-					IdToPoint(bestId, worldOrigin, worldTarget),
+					IdToPoint((int)bestId, worldOrigin, worldTarget),
 					IdToPoint(n, worldOrigin, worldTarget)
 				);
 				float nextG = currentG + moveCost;
@@ -1311,7 +1309,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		if (!travelCost.ContainsKey(1)) return [];
 
 		List<int> idPath = [1];
-		while (idPath[idPath.Count - 1] != 0)
+		while (idPath[^1] != 0)
 		{
 			idPath.Add((int)breadcrumb[idPath[^1]]);
 		}
@@ -1445,10 +1443,11 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return Distance(from, to);
 	}
 
-	private Vector3 IdToPoint(float id, Vector3 worldOrigin, Vector3 worldTarget)
+	private Vector3 IdToPoint(int id, Vector3 worldOrigin, Vector3 worldTarget)
 	{
-		// TODO: Id to point
-		return Vector3.Zero;
+		if (id == 0) return worldOrigin;
+		if (id == 1) return worldTarget;
+		return _graphPoints[id - 2];
 	}
 
 	private Vector3[] TryReuseCachedPath
@@ -1566,24 +1565,55 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		Vector3 p,
 		Godot.Collections.Array<Rid> exclusions)
 	{
-		// TODO: IsPointFree
-		return false;
+		Vector3I key = PointKey(p);
+		if (_pFreeCache.TryGetValue(key, out bool result)) return result;
+
+		_shapeQuery.Transform = new(Basis.Identity, p);
+		_shapeQuery.Exclude = exclusions;
+		_shapeQuery.CollisionMask = CollisionMask;
+		_shapeQuery.CollideWithAreas = CollideWithAreas;
+		_shapeQuery.CollideWithBodies = CollideWithBodies;
+		Godot.Collections.Array<Godot.Collections.Dictionary> hits = space.IntersectShape(_shapeQuery, 1);
+		bool isFree = hits.Count == 0;
+		_pFreeCache[key] = isFree;
+		return isFree;
 	}
 
 	private Vector3[] SmoothPath
 	(
 		PhysicsDirectSpaceState3D space,
-		Vector3[] result,
+		Vector3[] worldPath,
 		Godot.Collections.Array<Rid> exclusions)
 	{
-		// TODO: Smooth Path
-		return result;
+		if (worldPath.Length <= 2) return worldPath;
+
+		List<Vector3> smoothed = [worldPath[0]];
+		int anchor = 0;
+		while (anchor < worldPath.Length - 1)
+		{
+			int furthest = worldPath.Length - 1;
+			while (furthest > anchor + 1)
+			{
+				if (IsSegmentClear(space, worldPath[anchor], worldPath[furthest], exclusions)) break;
+				furthest -= 1;
+			}
+			smoothed.Add(worldPath[furthest]);
+			anchor = furthest;
+		}
+
+		return [.. smoothed];
 	}
 	
-	private float GetPathLength(Vector3[] packedResult)
+	private float GetPathLength(Vector3[] worldPath)
 	{
-		// TODO: Path Length
-		return 0.0f;
+		if (worldPath.Length < 2) return 0.0f;
+
+		float result = 0.0f;
+		for (int i = 0; i < worldPath.Length - 1; i++)
+		{
+			result += worldPath[i].DistanceTo(worldPath[i + 1]);
+		}
+		return result;
 	}
 
 	#endregion
