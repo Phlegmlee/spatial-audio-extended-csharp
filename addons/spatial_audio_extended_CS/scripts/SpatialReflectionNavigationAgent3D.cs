@@ -179,12 +179,12 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		}
 	}
 
-	private int _sampleSeed = 1337;
+	private ulong _sampleSeed = 1337;
 	/// <summary>
 	/// Deterministic random seed for stable sample layout.
 	/// </summary>
 	[Export]
-	public int SampleSeed
+	public ulong SampleSeed
 	{
 		get => _sampleSeed;
 		set
@@ -1628,17 +1628,72 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		Godot.Collections.Array<Rid> exclusions
 	)
 	{
+		bool mustRecenter = _graphPoints.Count == 0 ||
+		_graphAnchor.DistanceTo(worldOrigin) > GraphRecenterDistance;
 
+		if (!_graphDirty && !mustRecenter) return;
+
+		CheckRebuildSamples();
+		_graphAnchor = worldOrigin;
+		_graphOrigin = worldOrigin;
+		_graphPoints.Clear();
+		_graphEdges.Clear();
+		_graphEdgeCount = 0;
+
+		if (UseReachableScan) BuildGraphReachableScan(space, exclusions);
+		else BuildGraphRandomSamples(space, exclusions);
+
+		_graphDirty = false;
+		EmitSignal(SignalName.GraphRebuilt, _graphPoints.Count);
 	}
 
 	private void BuildGraphRandomSamples
-	(PhysicsDirectSpaceState3D space, List<Rid> exclusions)
+	(PhysicsDirectSpaceState3D space, Godot.Collections.Array<Rid> exclusions)
 	{
-		// TODO: BuildGraphRandom
+		foreach (Vector3 offset in _sampleOffsets)
+		{
+			Vector3 point = _graphAnchor + offset;
+			if (IsPointFree(space, point, exclusions)) _graphPoints.Add(point);
+		}
+
+		int count = _graphPoints.Count;
+		_graphEdges.Clear();
+		_graphEdges.Resize(count);
+		for (int i = 0; i < count; i++)
+		{
+			List<int> candis = [];
+			Vector3 p = _graphPoints[i];
+			int keepCount = Math.Max(GraphNeighborLimit * 2, GraphNeighborLimit + 2);
+			float maxConnSq = MaxConnectionDistance * MaxConnectionDistance;
+			for (int j = 0; j < count; j++)
+			{
+				if (i == j) continue;
+				float dSq = p.DistanceSquaredTo(_graphPoints[j]);
+				if (dSq <= maxConnSq) InsertSortedPair(candis, dSq, j, keepCount);
+			}
+
+			int added = 0;
+			foreach (int cand in candis)
+			{
+				if (added >= GraphNeighborLimit) break;
+				if (EdgeExists(i, cand)) continue;
+				if (IsSegmentClear(space, _graphPoints[i], _graphPoints[cand], exclusions))
+				{
+					AddEdge(i, cand);
+					added += 1;
+				}
+			}
+		}
+	}
+
+	private void InsertSortedPair(List<int> store, float score, int idx, int limit)
+	{
+		// TODO: InsertSortedPair
+		throw new NotImplementedException();
 	}
 
 	private void BuildGraphReachableScan
-	(PhysicsDirectSpaceState3D space, List<Rid> exclusions)
+	(PhysicsDirectSpaceState3D space, Godot.Collections.Array<Rid> exclusions)
 	{
 		// TODO: BuildGraphReachable
 	}
@@ -1716,7 +1771,16 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	// Rebuild navigation samples if needed.
 	private void CheckRebuildSamples()
 	{
-		// TODO: CheckRebuildSamples
+		if (!_samplesDirty) return;
+
+		_sampleOffsets.Clear();
+		RandomNumberGenerator rng = new();
+		rng.Seed = SampleSeed;
+		for (int i = 0; i < SamplePointCount; i++)
+		{
+			_sampleOffsets.Add(RandomPointInSphere(rng, NavigationRadius));
+		}
+		_samplesDirty = false;
 	}
 
 	private Godot.Collections.Array<Rid> BuildExclusions(Node3D target)
@@ -1864,7 +1928,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		// TODO: Update proxy occlusion transition support.
 	}
-	
+
 	private Node3D GetTargetNode()
 	{
 		if (TargetOverride != null) return TargetOverride;
@@ -1876,6 +1940,12 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			return null;
 		}
 		return GetViewport().GetCamera3D();
+	}
+	
+	private Vector3 RandomPointInSphere(RandomNumberGenerator rng, float navigationRadius)
+	{
+		// TODO: RndPointInSphere
+		throw new NotImplementedException();
 	}
 
 	#endregion
