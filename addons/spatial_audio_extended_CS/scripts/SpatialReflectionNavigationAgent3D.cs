@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection.Metadata.Ecma335;
+using System.Text.RegularExpressions;
 using Godot;
 namespace SpatialAudioCS;
 
@@ -1037,13 +1039,13 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private List<Vector3> _graphPoints = [];
 	private List<int[]> _graphEdges = [];
 	private int _graphEdgeCount = 0;
-	private Vector3[] _cachedWaypoints = [];
+	private List<Vector3> _cachedWaypoints = [];
 	private Vector3 _cachedOrigin = Vector3.Zero;
 	private Vector3 _cachedTarget = Vector3.Zero;
 	private float _cachedPathLen = 0.0f;
 	private float _currentPathLen = 0.0f;
 
-	private List<Vector3[]> _currentPath = [];
+	private Vector3[] _currentPath = [];
 	private bool _hasValidPath = false;
 	private bool _isDirectPath = false;
 	private Vector3 _lastWorldOrigin = Vector3.Zero;
@@ -1155,8 +1157,6 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		DrawDebug(false);
 	}
 
-	// TODO: Gameplay Logic
-
 	#endregion
 
 	#region Utils - Path
@@ -1257,16 +1257,14 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private Vector3[] FindPathGreedyAStar(Vector3 worldOrigin, Vector3 worldTarget, int[] startLinks, int[] goalLinks)
 	{
-		// TODO: FindPathGreedyAStar
-
 		Dictionary<int, bool> goalSet = [];
 		foreach (int idx in goalLinks) goalSet[idx] = true;
 
 		List<List<float>> frontier = [];
 		HeapPush(frontier, [0.0f, 0]); // [fScore, nodeId]
 
-		Dictionary<int, float> travelCost = new() { { 0, 0.0f }, };
-		Dictionary<int, int> breadcrumb = new() { { 0, -1 }, };
+		Dictionary<float, float> travelCost = new() { { 0, 0.0f }, };
+		Dictionary<float, float> breadcrumb = new() { { 0, -1 }, };
 
 		while (!(frontier.Count == 0))
 		{
@@ -1274,7 +1272,40 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			float bestF = best[0];
 			float bestId = best[1];
 
-			// TODO: get path using travel cost and neigbors
+			if (!travelCost.TryGetValue(bestId, out float currentG))
+			{
+				currentG = float.PositiveInfinity;
+				travelCost.Add(bestId, currentG);
+				continue;
+			}
+
+			float expectedF = currentG + EstimateCost(IdToPoint(bestId, worldOrigin, worldTarget), worldTarget);
+			if (bestF > expectedF + 0.0001f) continue;
+
+			if (bestId == 1) break;
+
+			int[] neighbors = NeighborsOf((int)bestId, startLinks, goalSet);
+
+			foreach (int n in neighbors)
+			{
+				float moveCost = ComputeMoveCost(
+					IdToPoint(bestId, worldOrigin, worldTarget),
+					IdToPoint(n, worldOrigin, worldTarget)
+				);
+				float nextG = currentG + moveCost;
+				if (travelCost.TryGetValue(n, out float nTCost))
+				{
+					nTCost = float.PositiveInfinity;
+					travelCost.Add(n, nTCost);
+				}
+				if (nextG < nTCost)
+				{
+					travelCost[n] = nextG;
+					breadcrumb[n] = bestId;
+					float f = nextG + EstimateCost(IdToPoint(n, worldOrigin, worldTarget), worldTarget);
+					HeapPush(frontier, [f, n]);
+				}
+			}
 		}
 
 		if (!travelCost.ContainsKey(1)) return [];
@@ -1282,7 +1313,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		List<int> idPath = [1];
 		while (idPath[idPath.Count - 1] != 0)
 		{
-			idPath.Add(breadcrumb[idPath[^1]]);
+			idPath.Add((int)breadcrumb[idPath[^1]]);
 		}
 		idPath.Reverse();
 
@@ -1297,12 +1328,31 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private void SetPath(Vector3[] path, bool direct)
 	{
-		// TODO: SetPath
+		_currentPath = path;
+		_hasValidPath = path.Length >= 2;
+		_isDirectPath = direct && _hasValidPath;
+		_currentPathLen = GetPathLength(path);
+		if (_hasValidPath)
+		{
+			_cachedOrigin = path[0];
+			_cachedTarget = path[^1];
+			_cachedPathLen = _currentPathLen;
+			_cachedWaypoints = [];
+			if (!_isDirectPath && path.Length > 2)
+			{
+				for (int i = 0; i < path.Length - 1; i++) _cachedWaypoints.Add(path[i]);
+			}
+		}
+		EmitSignal(SignalName.PathUpdated, _currentPath, _isDirectPath);
 	}
 
 	private void SetFailedPath(Vector3 origin, Vector3 target, bool blocked)
 	{
-		// TODO: SetFailedPath
+		_currentPath = [];
+		_hasValidPath = false;
+		_isDirectPath = false;
+		_currentPathLen = 0.0f;
+		if (blocked) EmitSignal(SignalName.PathFailed, origin, target);
 	}
 
 	private void HeapPush(List<List<float>> heap, List<float> item)
@@ -1328,28 +1378,74 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		if (!(heap.Count == 0))
 		{
 			heap[0] = last;
-			// TODO: There is a while true here in gdscript, I don't like it
+			byte exit = 0;
+			int i = 0;
+			do
+			{
+				int l = i * 2 + 1;
+				int r = l + 1;
+				if (l >= heap.Count) exit++;
+				int m = l;
+				if (r < heap.Count && heap[r][0] < heap[l][0]) m = r;
+				if (heap[i][0] <= heap[m][0]) exit++;
+				(heap[m], heap[i]) = (heap[i], heap[m]);
+				i = m;
+			}
+			while (exit == 0);
 		}
-
 		return top;
 	}
 
-	private void EstimateCost()
+	private float EstimateCost(Vector3 from, Vector3 to)
 	{
-		// TODO: Estimate Cost
+		return HeuristicWeight * Distance(from, to);
 	}
 	
-	private void NeighborsOf()
+	private float Distance(Vector3 from, Vector3 to)
 	{
-		// TODO: Neighbors Of
+		switch (DistanceMode)
+		{
+			case DistanceModeEnum.Manhattan:
+				Vector3 distVect = (from - to).Abs();
+				return distVect.X + distVect.Y + distVect.Z;
+
+			default:
+				return from.DistanceTo(to);
+		}
+	}
+	
+	private int[] NeighborsOf(int id, int[] startLinks, Dictionary<int, bool> goalSet)
+	{
+		List<int> result = [];
+
+		if (id == 1) return [];
+		if (id == 0)
+		{
+			foreach (int link in startLinks)
+			{
+				result.Add(link + 2);
+			}
+			return [.. result];
+		}
+
+		int graphIdx = id - 2;
+		foreach (int edge in _graphEdges[graphIdx])
+		{
+			result.Add(edge + 2);
+		}
+
+		if (goalSet.ContainsKey(graphIdx)) result.Add(1);
+
+		return [.. result];
 	}
 
-	private void ComputeMoveCost()
+	private float ComputeMoveCost(Vector3 from, Vector3 to)
 	{
-		// TODO: Compute Move Cost
+		if (UseUnitCost) return UnitCost;
+		return Distance(from, to);
 	}
 
-	private Vector3 IdToPoint(int id, Vector3 worldOrigin, Vector3 worldTarget)
+	private Vector3 IdToPoint(float id, Vector3 worldOrigin, Vector3 worldTarget)
 	{
 		// TODO: Id to point
 		return Vector3.Zero;
@@ -1364,7 +1460,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	)
 	{
 		List<Vector3> result = [];
-		if (_cachedWaypoints.IsEmpty()) return [.. result];
+		if (_cachedWaypoints.Count == 0) return [.. result];
 		if (worldOrigin.DistanceTo(_cachedOrigin) > ReuseOriginTolerance) return [.. result];
 		if (worldTarget.DistanceTo(_cachedTarget) > ReuseTargetTolerance) return [.. result];
 
