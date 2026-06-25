@@ -1035,7 +1035,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private Vector3 _graphAnchor = Vector3.Zero;
 	private Vector3 _graphOrigin = Vector3.Zero;
 	private List<Vector3> _graphPoints = [];
-	private List<int[]> _graphEdges = [];
+	private List<List<int>> _graphEdges = [];
 	private int _graphEdgeCount = 0;
 	private List<Vector3> _cachedWaypoints = [];
 	private Vector3 _cachedOrigin = Vector3.Zero;
@@ -1217,8 +1217,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			return;
 		}
 
-		int[] startLinks = FindDynamicLinks(space, worldOrigin, worldTarget, exclusions);
-		int[] goalLinks = FindDynamicLinks(space, worldTarget, worldOrigin, exclusions);
+		float[] startLinks = FindDynamicLinks(space, worldOrigin, worldTarget, exclusions);
+		float[] goalLinks = FindDynamicLinks(space, worldTarget, worldOrigin, exclusions);
 		if (startLinks.Length == 0 || goalLinks.Length == 0)
 		{
 			SetFailedPath(worldOrigin, worldTarget, true);
@@ -1253,7 +1253,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return space.IntersectRay(_rayQuery);
 	}
 
-	private Vector3[] FindPathGreedyAStar(Vector3 worldOrigin, Vector3 worldTarget, int[] startLinks, int[] goalLinks)
+	private Vector3[] FindPathGreedyAStar(Vector3 worldOrigin, Vector3 worldTarget, float[] startLinks, float[] goalLinks)
 	{
 		Dictionary<int, bool> goalSet = [];
 		foreach (int idx in goalLinks) goalSet[idx] = true;
@@ -1412,7 +1412,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		}
 	}
 	
-	private int[] NeighborsOf(int id, int[] startLinks, Dictionary<int, bool> goalSet)
+	private int[] NeighborsOf(int id, float[] startLinks, Dictionary<int, bool> goalSet)
 	{
 		List<int> result = [];
 
@@ -1661,7 +1661,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		_graphEdges.Resize(count);
 		for (int i = 0; i < count; i++)
 		{
-			List<int> candis = [];
+			List<float> candis = [];
 			Vector3 p = _graphPoints[i];
 			int keepCount = Math.Max(GraphNeighborLimit * 2, GraphNeighborLimit + 2);
 			float maxConnSq = MaxConnectionDistance * MaxConnectionDistance;
@@ -1686,41 +1686,86 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		}
 	}
 
-	private void InsertSortedPair(List<int> store, float score, int idx, int limit)
-	{
-		// TODO: InsertSortedPair
-		throw new NotImplementedException();
-	}
-
 	private void BuildGraphReachableScan
 	(PhysicsDirectSpaceState3D space, Godot.Collections.Array<Rid> exclusions)
 	{
+		List<Vector3I> neighborDirs = GetScanNeighborDirs(ScanNeighborMode);
+		List<Vector3I> queue = [];
+		int head = 0;
+
 		// TODO: BuildGraphReachable
+	}
+
+	private List<Vector3I> GetScanNeighborDirs(ScanNeighborModeEnum scanNeighborMode)
+	{
+		throw new NotImplementedException();
 	}
 
 	private void AddEdge(int a, int b)
 	{
-		// TODO: AddEdge
+		List<int> aa = _graphEdges[a];
+		aa.Add(b);
+		_graphEdges[a] = aa;
+		List<int> bb = _graphEdges[b];
+		bb.Add(a);
+		_graphEdges[b] = bb;
+		_graphEdgeCount++;
 	}
 
 	private bool EdgeExists(int a, int b)
 	{
-		// TODO: EdgeExists
+		foreach (int edge in _graphEdges[a])
+		{
+			if (edge == b) return true;
+		}
 		return false;
 	}
 
-	private int[] FindDynamicLinks
+	private float[] FindDynamicLinks
 	(
 		PhysicsDirectSpaceState3D space,
 		Vector3 worldOrigin,
 		Vector3 worldTarget,
 		Godot.Collections.Array<Rid> exclusions)
 	{
-		List<int> result = [];
+		List<float> candidates = [];
+		int keepCount = Math.Max(DynamicConnectionLimit * Math.Max(DynamicCanidateMultiplier, 1), DynamicConnectionLimit + 2);
 
-		// TODO: FindDynamicLinks
+		for (int i = 0; i < _graphPoints.Count; i++)
+		{
+			Vector3 point = _graphPoints[i];
+			float score = worldOrigin.DistanceSquaredTo(point) + point.DistanceSquaredTo(worldTarget) * 0.25f;
+			InsertSortedPair(candidates, score, i, keepCount);
+		}
 
-		return [.. result];
+		foreach (int candi in candidates)
+		{
+			if (candidates.Count >= DynamicConnectionLimit) break;
+			int idx = candi;
+			if (IsSegmentClear(space, worldOrigin, _graphPoints[idx], exclusions)) candidates.Add(idx);
+		}
+		return [.. candidates];
+	}
+
+	private void InsertSortedPair(List<float> store, float score, int idx, int limit)
+	{
+		List<float> pair = [score, idx];
+		bool inserted = false;
+		for (int i = 0; i < store.Count; i++)
+		{
+			if (score < store[i])
+			{
+				store.InsertRange(i, pair);
+				inserted = true;
+				break;
+			}
+			if (!inserted)
+			{
+				if (store.Count < limit) store.AddRange(pair);
+				else return;
+			}
+			if (store.Count > limit) store.Resize(limit);
+		}
 	}
 
 	#endregion
