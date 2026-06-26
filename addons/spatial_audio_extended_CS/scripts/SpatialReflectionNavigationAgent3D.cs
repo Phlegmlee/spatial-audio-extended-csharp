@@ -1058,7 +1058,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private Dictionary<string, bool> _segVisCache = [];
 	private Dictionary<Vector3I, bool> _pFreeCache = [];
 	private bool _exclusionsDirty = true;
-	List<Rid> _cachedBaseExclusions = [];
+	Godot.Collections.Array<Rid> _cachedBaseExclusions = [];
 
 	private readonly string[] _NAV_PROFILE_CUSTOM_ONLY_PROPS = [
 		"skip_recompute_when_static",
@@ -1673,13 +1673,13 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			}
 
 			int added = 0;
-			foreach (int cand in candis)
+			foreach (float cand in candis)
 			{
 				if (added >= GraphNeighborLimit) break;
-				if (EdgeExists(i, cand)) continue;
-				if (IsSegmentClear(space, _graphPoints[i], _graphPoints[cand], exclusions))
+				if (EdgeExists(i, (int)cand)) continue;
+				if (IsSegmentClear(space, _graphPoints[i], _graphPoints[(int)cand], exclusions))
 				{
-					AddEdge(i, cand);
+					AddEdge(i, (int)cand);
 					added += 1;
 				}
 			}
@@ -1888,18 +1888,43 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		_samplesDirty = false;
 	}
 
+	// Godot Array needed here instead of List due to ray query exclusions requirement
 	private Godot.Collections.Array<Rid> BuildExclusions(Node3D target)
 	{
-		Godot.Collections.Array<Rid> result = [];
+		if (_exclusionsDirty)
+		{
+			_cachedBaseExclusions.Clear();
+			Dictionary<Rid, bool> seen = [];
+			AppendExclusionsRecursive(this, _cachedBaseExclusions, seen);
+			foreach (Node3D node in ExcludedCollisionNodes)
+			{
+				AppendExclusionsRecursive(node, _cachedBaseExclusions, seen);
+			}
+			_exclusionsDirty = false;
+		}
 
-		// TODO: BuildExclusions
+		if (!IgnoreListenerBody || target == null) return _cachedBaseExclusions;
+
+		Godot.Collections.Array<Rid> result = _cachedBaseExclusions.Duplicate();
+		Dictionary<Rid, bool> seenMerge = [];
+
+		foreach (Rid rid in result) seenMerge[rid] = true;
+
+		Node listenerRoot = FindCollisionAncestor(target);
+		if (listenerRoot != null) AppendExclusionsRecursive(listenerRoot, result, seenMerge);
 
 		return result;
 	}
 
-	private void AppendExclusionsRecursive(Node node, List<Rid> result, Dictionary<Rid, bool> seen)
+	private void AppendExclusionsRecursive(Node node, Godot.Collections.Array<Rid> result, Dictionary<Rid, bool> seen)
 	{
-		
+		if (node == null) return;
+		if (node is not CollisionObject3D collision) return;
+
+		Rid rid = collision.GetRid();
+		if (!seen.ContainsKey(rid)) { seen[rid] = true; result.Add(rid); }
+
+		foreach (Node child in node.GetChildren()) AppendExclusionsRecursive(child, result, seen);
 	}
 
 	#endregion
