@@ -724,7 +724,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	/// </summary>
 	[ExportGroup("Audio Proxy")]
 	[Export]
-	public bool autoFindAudioPlayerChild
+	public bool AutoFindAudioPlayerChild
 	{
 		get => _autoFindAudioPlayerChild;
 		set
@@ -1060,41 +1060,41 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private bool _exclusionsDirty = true;
 	Godot.Collections.Array<Rid> _cachedBaseExclusions = [];
 
-	private readonly string[] _NAV_PROFILE_CUSTOM_ONLY_PROPS = [
-		"skip_recompute_when_static",
-		"recompute_origin_threshold",
-		"recompute_target_threshold",
-		"static_recompute_interval",
-		"navigation_radius",
-		"sample_point_count",
-		"sample_seed",
-		"max_connection_distance",
-		"graph_neighbor_limit",
-		"dynamic_connection_limit",
-		"dynamic_candidate_multiplier",
-		"clearance_radius",
-		"edge_clearance_checks",
-		"graph_recenter_distance",
-		"use_reachable_scan",
-		"scan_cell_size",
-		"scan_neighbor_mode",
-		"scan_max_cells",
-		"scan_max_cell_extent",
-		"scan_cell_inset",
-		"heuristic_weight",
-		"distance_mode",
-		"use_unit_cost",
-		"unit_cost",
-		"reuse_last_path_when_valid",
-		"reuse_origin_tolerance",
-		"reuse_target_tolerance",
-		"reuse_max_detour_ratio",
-		"smooth_path_with_visibility",
-		"collision_mask",
-		"collide_with_areas",
-		"collide_with_bodies",
-		"ignore_listener_body",
-		"excluded_collision_nodes",
+	private readonly List<StringName> _NAV_PROFILE_CUSTOM_ONLY_PROPS = [
+		PropertyName.SkipRecomputeWhenStatic,
+		PropertyName.RecomputeOriginThreshold,
+		PropertyName.RecomputeTargetThreshold,
+		PropertyName.StaticRecomputeInterval,
+		PropertyName.NavigationRadius,
+		PropertyName.SamplePointCount,
+		PropertyName.SampleSeed,
+		PropertyName.MaxConnectionDistance,
+		PropertyName.GraphNeighborLimit,
+		PropertyName.DynamicConnectionLimit,
+		PropertyName.DynamicCanidateMultiplier,
+		PropertyName.ClearanceRadius,
+		PropertyName.EdgeClearanceChecks,
+		PropertyName.GraphRecenterDistance,
+		PropertyName.UseReachableScan,
+		PropertyName.ScanCellSize,
+		PropertyName.ScanNeighborMode,
+		PropertyName.ScanedCellMax,
+		PropertyName.ScannedMaxExtent,
+		PropertyName.ScanCellInset,
+		PropertyName.HeuristicWeight,
+		PropertyName.DistanceMode,
+		PropertyName.UseUnitCost,
+		PropertyName.UnitCost,
+		PropertyName.ReuseLastPath,
+		PropertyName.ReuseOriginTolerance,
+		PropertyName.ReuseTargetTolerance,
+		PropertyName.ReuseMaxDetourRatio,
+		PropertyName.SmoothPathWithVisiblity,
+		PropertyName.CollisionMask,
+		PropertyName.CollideWithAreas,
+		PropertyName.CollideWithBodies,
+		PropertyName.IgnoreListenerBody,
+		PropertyName.ExcludedCollisionNodes,
 	];
 
 	#endregion
@@ -1960,20 +1960,23 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return Vector3.Zero;
 	}
 
-	private SpatialAudioPlayer3D FindSpatialAudioPlayer()
+	private Node3D FindAudioPlayer(Node node)
 	{
-		// TODO: FindSpatialAudioPlayer
+		foreach (Node child in node.GetChildren())
+		{
+			if (child is AudioStreamPlayer3D) return child as Node3D;
+		}
 
-		return new SpatialAudioPlayer3D();
+		return null;
 	}
 
 	private bool IsSpatialAudioPlayerFound()
 	{
-		SpatialAudioPlayer3D result = FindSpatialAudioPlayer();
+		if (FindAudioPlayer(this) is SpatialAudioPlayer3D result) return true;
 
 		// TODO: Is spatial audio player found
 
-		return result != null;
+		return false;
 	}
 
 	private Node FindCollisionAncestor(Node node)
@@ -2115,24 +2118,245 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		List<string> warnings = [];
 
+		Node3D configuredAudio = GetAudioPlayer();
 		bool foundSpatial = IsSpatialAudioPlayerFound();
+
 		if (!foundSpatial)
 		{
 			warnings.Add($"No SpatialAudioPlayer3D was found. Add one as a child or assign one in {AudioPlayerNode} for reflected proxy playback.");
 		}
 
-		// TODO: _GetConfigurationWarnings
+		if (configuredAudio != null && configuredAudio is AudioStreamPlayer3D && configuredAudio is not SpatialAudioPlayer3D)
+		{
+			warnings.Add($"Detected audio player is {configuredAudio.Name}, this is not a compatable, " +
+			"proxy reflection integration requires a SpatialAudioPlayer3D to function correctly.");
+		}
+		else if (configuredAudio != null && configuredAudio is not AudioStreamPlayer3D)
+		{
+			warnings.Add($"{nameof(AudioPlayerNode)} points to {configuredAudio.Name}, which is not a " +
+			"SpatialAudioPlayer3D. Assign a SpatialAudioPlayer3D for reflected proxy playback.");
+		}
 
 		return [.. warnings];
+	}
+
+	private Node3D GetAudioPlayer()
+	{
+		if (AudioPlayerNode != null && IsInstanceValid(AudioPlayerNode)) return AudioPlayerNode;
+		if (AutoFindAudioPlayerChild) return FindAudioPlayer(this);
+		return null;
 	}
 
 	/// <inheritdoc />
 	public override void _ValidateProperty(Godot.Collections.Dictionary property)
 	{
-		// TODO: _ValidateProperty
-	}
+		if (NavigationProfile != NavigationProfileEnum.Custom)
+		{
+			foreach (StringName propName in _NAV_PROFILE_CUSTOM_ONLY_PROPS)
+			{
+				if ((StringName)property["name"] == propName)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
 
-	// TODO: Editor Configuration
+		List<StringName> recomputeProps =
+		[
+			PropertyName.RecomputeOriginThreshold,
+			PropertyName.RecomputeTargetThreshold,
+			PropertyName.StaticRecomputeInterval,
+		];
+		if (!SkipRecomputeWhenStatic)
+		{
+			foreach (StringName prop in recomputeProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> scanProps =
+		[
+			PropertyName.ScanCellSize,
+			PropertyName.ScanNeighborMode, PropertyName.ScanedCellMax,
+			PropertyName.ScannedMaxExtent, PropertyName.ScanCellInset,
+		];
+		if (!UseReachableScan)
+		{
+			foreach (StringName prop in scanProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> unitProps =
+		[ PropertyName.UnitCost ];
+		if (!UseUnitCost)
+		{
+			foreach (StringName prop in unitProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> reusePathProps =
+		[
+			PropertyName.ReuseOriginTolerance,
+			PropertyName.ReuseTargetTolerance,
+			PropertyName.ReuseMaxDetourRatio,
+		];
+		if (!ReuseLastPath)
+		{
+			foreach (StringName prop in reusePathProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> audioPlayerProps =
+		[
+			PropertyName.AudioPlayerNode, PropertyName.AutoFindAudioPlayerChild, PropertyName.ProxyOnlyWhenBlocked,
+			PropertyName.ProxyWaypointIndex, PropertyName.AudioProxyLerpSpeed, PropertyName.AudioProxyBackoffLerpSpeed,
+			PropertyName.AudioProxyHeightOffset, PropertyName.RestoreAudioToOriginWhenDisabled, PropertyName.ProxyForceInnerRadiusOutsideSourceZone,
+			PropertyName.EnableProxyListenerBackoff, PropertyName.ProxyMinListenerDistance, PropertyName.ProxyBackoffReleaseDistance,
+			PropertyName.ProxyBackoffPathDistance, PropertyName.ProxySpringArmEnabled, PropertyName.ProxSpringMinDistance,
+			PropertyName.ProxySpringPushStrength, PropertyName.ProxySpringPushSpeed, PropertyName.ProxySpringReturnSpeed,
+			PropertyName.ApplyRefectionVolumeLoss, PropertyName.ReflectionLossDbPerMeter, PropertyName.ReflectionLossPower,
+			PropertyName.ReflectionMaxLossDb, PropertyName.ProxyOcclusionTransitionSmoothing, PropertyName.ProxyOcclusionHoldSeconds,
+			PropertyName.ProxyOcclusionHoldMoveThreshold, PropertyName.DebugDrawAudioProxy, PropertyName.DebugAudioProxyColor, PropertyName.DebugAudioProxyRadius,
+		];
+		if (!MoveAudioPlayer)
+		{
+			foreach (StringName prop in audioPlayerProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> proxySpringProps =
+		[
+			PropertyName.EnableProxyListenerBackoff, PropertyName.ProxyMinListenerDistance, PropertyName.ProxyBackoffReleaseDistance, 
+			PropertyName.ProxyBackoffPathDistance, PropertyName.AudioProxyBackoffLerpSpeed,
+		];
+		if (MoveAudioPlayer && ProxySpringArmEnabled)
+		{
+			foreach (StringName prop in proxySpringProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> listenerBackProps =
+		[
+			PropertyName.ProxyMinListenerDistance, PropertyName.ProxyBackoffReleaseDistance,
+			PropertyName.ProxyBackoffPathDistance, PropertyName.AudioProxyBackoffLerpSpeed,
+		];
+		if (MoveAudioPlayer && !ProxySpringArmEnabled && !EnableProxyListenerBackoff)
+		{
+			foreach (StringName prop in listenerBackProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> noArmProps =
+		[
+			PropertyName.ProxSpringMinDistance, PropertyName.ProxySpringPushStrength,
+			PropertyName.ProxySpringPushSpeed, PropertyName.ProxySpringReturnSpeed,
+		];
+		if (MoveAudioPlayer && !ProxySpringArmEnabled)
+		{
+			foreach (StringName prop in noArmProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> noVolLossProps =
+		[
+			PropertyName.ReflectionLossDbPerMeter, PropertyName.ReflectionLossPower,
+			PropertyName.ReflectionMaxLossDb,
+		];
+		if (MoveAudioPlayer && !ApplyRefectionVolumeLoss)
+		{
+			foreach (StringName prop in noVolLossProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> noOccSmoothProps =
+		[
+			PropertyName.ProxyOcclusionHoldSeconds, PropertyName.ProxyOcclusionHoldMoveThreshold,
+		];
+		if (MoveAudioPlayer && !ProxyOcclusionTransitionSmoothing)
+		{
+			foreach (StringName prop in noOccSmoothProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> debugPathProps =
+		[
+			PropertyName.DebugDrawDirectLineWhenBlocked,
+		];
+		if (!DebugDrawPath)
+		{
+			foreach (StringName prop in debugPathProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
+		List<StringName> debugProxyProps =
+		[
+			PropertyName.DebugAudioProxyColor, PropertyName.DebugAudioProxyRadius,
+		];
+		if (!DebugDrawAudioProxy)
+		{
+			foreach (StringName prop in debugProxyProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+	}
 
 	#endregion
 
