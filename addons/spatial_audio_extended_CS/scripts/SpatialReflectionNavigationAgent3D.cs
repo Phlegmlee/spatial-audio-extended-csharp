@@ -1033,7 +1033,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private SphereShape3D _clearanceShape = new();
 
 	private Vector3 _graphAnchor = Vector3.Zero;
-	private Vector3 _graphOrigin = Vector3.Zero;
+	private Vector3 _gridOrigin = Vector3.Zero;
 	private List<Vector3> _graphPoints = [];
 	private List<List<int>> _graphEdges = [];
 	private int _graphEdgeCount = 0;
@@ -1635,7 +1635,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 		CheckRebuildSamples();
 		_graphAnchor = worldOrigin;
-		_graphOrigin = worldOrigin;
+		_gridOrigin = worldOrigin;
 		_graphPoints.Clear();
 		_graphEdges.Clear();
 		_graphEdgeCount = 0;
@@ -1692,8 +1692,68 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		List<Vector3I> neighborDirs = GetScanNeighborDirs(ScanNeighborMode);
 		List<Vector3I> queue = [];
 		int head = 0;
+		Dictionary<Vector3I, int> indexOf = [];
+		float radiusSq = NavigationRadius * NavigationRadius;
+		int maxEx = ScannedMaxExtent;
 
-		// TODO: BuildGraphReachable
+		Vector3I startCell = Vector3I.Zero;
+		Vector3 startPos = CellToWorld(startCell, _gridOrigin, ScanCellSize);
+		if (!IsPointFree(space, startPos, exclusions)) return;
+
+		indexOf[startCell] = 0;
+		queue.Add(startCell);
+		_graphPoints.Add(startPos);
+		_graphEdges.Add([]);
+
+		while (head < queue.Count && _graphPoints.Count < ScanedCellMax)
+		{
+			Vector3I cell = queue[head];
+			head += 1;
+			int cellIdx = indexOf[cell];
+			Vector3 cellPos = _graphPoints[cellIdx];
+
+			foreach (Vector3I dir in neighborDirs)
+			{
+				Vector3I nextCell = cell + dir;
+				if (maxEx > 0 &&
+				(
+					Math.Abs(nextCell.X) > maxEx || Math.Abs(nextCell.Y) > maxEx || Math.Abs(nextCell.Z) > maxEx
+				)
+				) continue;
+
+				Vector3 nextPos = CellToWorld(nextCell, _gridOrigin, ScanCellSize);
+				if (nextPos.DistanceSquaredTo(_graphAnchor) > radiusSq) continue;
+
+				bool hasNext = indexOf.ContainsKey(nextCell);
+				if (!hasNext)
+				{
+					if (!IsPointFree(space, nextPos, exclusions)) continue;
+					if (!IsSegmentClear(space, cellPos, nextPos, exclusions)) continue;
+
+					indexOf[nextCell] = _graphPoints.Count;
+					queue.Add(nextCell);
+					_graphPoints.Add(nextPos);
+					_graphEdges.Add([]);
+					int newIdx = indexOf[nextCell];
+					if (!EdgeExists(cellIdx, newIdx)) AddEdge(cellIdx, newIdx);
+					continue;
+				}
+				else if (!IsSegmentClear(space, cellPos, nextPos, exclusions)) continue;
+
+				int nextIdx = indexOf[nextCell];
+				if (cellIdx == nextIdx || EdgeExists(cellIdx, nextIdx)) continue;
+				if (_graphEdges[cellIdx].Count >= GraphNeighborLimit ||
+				_graphEdges[nextIdx].Count >= GraphNeighborLimit) continue;
+				AddEdge(cellIdx, nextIdx);
+			}
+		}
+	}
+
+	private Vector3 CellToWorld(Vector3I cell, Vector3 gridOrigin, float cellSize)
+	{
+		float step = cellSize * (1.0f - ScanCellInset);
+		Vector3 result = new(cell.X, cell.Y, cell.Z);
+		return gridOrigin + result * step;
 	}
 
 	private List<Vector3I> GetScanNeighborDirs(ScanNeighborModeEnum scanNeighborMode)
