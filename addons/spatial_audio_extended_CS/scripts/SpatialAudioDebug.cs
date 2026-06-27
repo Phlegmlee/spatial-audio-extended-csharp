@@ -168,7 +168,7 @@ public partial class SpatialAudioDebug : Node3D
 	private ScrollContainer _debugSharedScroll = null;
 	private VBoxContainer _debugSharedVbox = null;
 
-	internal void SetExternalNavigationDebugData(bool active, Dictionary<string, Variant> info)
+	internal void SetExtNavDebugData(bool active, Dictionary<string, Variant> info)
 	{
 		_externalNavigationDebugActive = active;
 		if (active)
@@ -179,14 +179,14 @@ public partial class SpatialAudioDebug : Node3D
 		{
 			_externalNavigationDebug = [];
 		}
-		RefreshNavigationDebugVisibility();
+		RefreshNavDebugVis();
 	}
 
-	internal void ClearExternalNavigationDebugData()
+	internal void ClearExtNavDebugData()
 	{
 		_externalNavigationDebugActive = false;
 		_externalNavigationDebug.Clear();
-		RefreshNavigationDebugVisibility();
+		RefreshNavDebugVis();
 	}
 
 	#endregion
@@ -416,10 +416,10 @@ public partial class SpatialAudioDebug : Node3D
 
 		_debugSharedLayer.AddChild(_debugConnectorLine);
 
-		RefreshNavigationDebugVisibility();
+		RefreshNavDebugVis();
 	}
 
-	private void RefreshNavigationDebugVisibility()
+	private void RefreshNavDebugVis()
 	{
 		if (_debugNavigationToggle == null || _debugNavigationScroll == null) return;
 
@@ -645,7 +645,7 @@ public partial class SpatialAudioDebug : Node3D
 		text += $"Ray Mode       {_parentAudioPlayer.RayDistribution}   ({_parentAudioPlayer.rayNames.Count - 1}) \n";
 
 		_debugOverlayLabel.Text = text;
-		RefreshNavigationDebugVisibility();
+		RefreshNavDebugVis();
 
 		List<string> rayNames = _parentAudioPlayer.rayNames;
 
@@ -1110,7 +1110,7 @@ public partial class SpatialAudioDebug : Node3D
 	private void OnNavigationTogglePressed()
 	{
 		_debugNavigationExpanded = !_debugNavigationExpanded;
-		RefreshNavigationDebugVisibility();
+		RefreshNavDebugVis();
 	}
 
 	private void OnRayMetaClicked(Variant meta)
