@@ -700,19 +700,19 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		}
 	}
 
-	private Node3D _audioPlayerNode = null;
+	private SpatialAudioPlayer3D _audioPlayerNode = null;
 	/// <summary>
 	/// Explicit audio player node to move.
 	/// </summary>
 	[Export]
-	public Node3D AudioPlayerNode
+	public SpatialAudioPlayer3D AudioPlayerNode
 	{
 		get => _audioPlayerNode;
 		set
 		{
 			_audioPlayerNode = value;
 #if TOOLS
-			ResolveAudioProxyRef();
+			RefreshProxyRadius();
 			UpdateConfigurationWarnings();
 #endif
 		}
@@ -731,7 +731,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		{
 			_autoFindAudioPlayerChild = value;
 #if TOOLS
-			ResolveAudioProxyRef();
+			RefreshProxyRadius();
 			UpdateConfigurationWarnings();
 			NotifyPropertyListChanged();
 #endif
@@ -836,7 +836,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	/// Minimum allowed listener distance for the reflected proxy.
 	/// </summary>
 	[Export(PropertyHint.Range, "0.1f, 20.0f, 0.05f, suffix:m")]
-	public float ProxSpringMinDistance { get; set; } = 1.5f;
+	public float ProxySpringMinDistance { get; set; } = 1.5f;
 
 	/// <summary>
 	/// Extra retreat amount when listener breaches the minimum distance.
@@ -1052,7 +1052,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private Vector3 _lastSolveTarget = Vector3.Zero;
 	private bool _hasLastSolve = false;
 
-	Node3D _audioProxyRef = null;
+	//SpatialAudioPlayer3D _audioProxyRef = null;
 	Vector3 _currentProxy = Vector3.Zero;
 	Vector3 _targetProxy = Vector3.Zero;
 	bool _proxyReady = false;
@@ -1138,7 +1138,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 		ApplyNavigationProfilePreset();
 		CheckRebuildSamples();
-		ResolveAudioProxyRef();
+		RefreshProxyRadius();
 		RecomputePath();
 	}
 
@@ -1164,7 +1164,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		_timeAccum += delta;
 		if (_timeAccum >= UpdateInterval)
 		{ _timeAccum = 0.0; RecomputePath(); }
-		UpdateAudioProxy(delta);
+		UpdateAudio(delta);
 		DrawDebug(false);
 	}
 
@@ -1944,10 +1944,10 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	#region Utils - Proxy
 
-	private void UpdateAudioProxy(double delta)
+	private void UpdateAudio(double delta)
 	{
-		if (_audioProxyRef == null || !IsInstanceValid(_audioProxyRef))
-		{ ResolveAudioProxyRef(); if (_audioProxyRef == null) return; }
+		if (AudioPlayerNode == null || !IsInstanceValid(AudioPlayerNode))
+		{ GetAudioPlayer(); if (AudioPlayerNode == null) return; }
 
 		Vector3 worldOrigin = ResolveWorldOrigin();
 		Vector3 worldListener = _lastWorldTarget;
@@ -1964,7 +1964,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 #endif
 			if (RestoreAudioToOriginWhenDisabled)
 			{
-				_audioProxyRef.GlobalPosition = worldOrigin;
+				AudioPlayerNode.GlobalPosition = worldOrigin;
 				_currentProxy = worldOrigin;
 				_targetProxy = worldOrigin;
 				_proxyReady = true;
@@ -1995,7 +1995,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			};
 		}
 
-		_audioProxyRef.GlobalPosition = _currentProxy;
+		AudioPlayerNode.GlobalPosition = _currentProxy;
 		UpdateRefMod(worldOrigin, _currentProxy);
 		UpdateProxyInnerRadius(refActive, worldOrigin, _currentProxy);
 		UpdateProxyOccl(refActive);
@@ -2005,67 +2005,68 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		EmitSignal(SignalName.AudioProxyPosUpdated, _currentProxy);
 	}
 
-	private void ResetAudioProxyToOrigin()
+	private void RefreshProxyRadius()
 	{
-		if (_audioProxyRef == null || !IsInstanceValid(_audioProxyRef))
-		{ ResolveAudioProxyRef(); if (_audioProxyRef == null) return; }
-
-		Vector3 worldOrigin = ResolveWorldOrigin();
-		Vector3 worldListener = _lastWorldTarget;
-		if (_hasValidPath && _currentPath.Length > 0) worldListener = _currentPath[^1];
-
-		_audioProxyRef.GlobalPosition = worldOrigin;
-		_currentProxy = worldOrigin;
-		_targetProxy = worldOrigin;
-		_proxyReady = true;
-		_proxyInBackoff = false;
-		_springArmReady = false;
-		UpdateProxyInnerRadius(false, worldOrigin, worldOrigin);
-		UpdateProxyOccl(false);
-		ApplyRefVolOffset(0.0f);
-#if DEBUG
-		UpdateExtNavDebug(false, worldOrigin, worldListener);
-#endif
-	}
-
-	private void ResolveAudioProxyRef()
-	{
-		if (AudioPlayerNode != null && IsInstanceValid(AudioPlayerNode))
-		{
-#if DEBUG
-			// TODO: Call ClearExtNavDebugData from SpatialAudioDebug
-#endif
-			_audioProxyRef = AudioPlayerNode;
-			RefreshProxyRadiusCap();
-			return;
-		}
-
-		if (!AutoFindAudioPlayerChild) return;
-
-		Node3D foundPlayer = FindAudioPlayer(this);
-#if DEBUG
-		// TODO: Call ClearExtNavDebugData from SpatialAudioDebug
-#endif
-		_audioProxyRef = foundPlayer;
-		RefreshProxyRadiusCap();
-	}
-
-	private void RefreshProxyRadiusCap()
-	{
-		// TODO: RefreshProxyRadiusCap
-		throw new NotImplementedException();
+		_proxyHasInner = false;
+		_proxyInnerRad = -1.0f;
+		_forceProxyInnerRad = false;
+		if (AudioPlayerNode == null || !IsInstanceValid(AudioPlayerNode)) return;
+		_proxyInnerRad = AudioPlayerNode.InnerRadius;
+		_proxyHasInner = true;
 	}
 
 	private void UpdateProxyInnerRadius(bool reflectedActive, Vector3 worldOrigin, Vector3 worldProxy)
 	{
-		// TODO: UpdateProxyInnerRadius
-		throw new NotImplementedException();
+		if (AudioPlayerNode == null || !IsInstanceValid(AudioPlayerNode) || !_proxyHasInner) return;
+		_proxyInnerRad = AudioPlayerNode.InnerRadius;
+		float srcInner = MathF.Max(_proxyInnerRad, 0.0f);
+		bool outSrcInner = worldOrigin.DistanceTo(worldProxy) > srcInner + 0.001f;
+		if (outSrcInner && !_forceProxyInnerRad)
+		{
+			AudioPlayerNode.InnerRadius = 0.0f;
+			_forceProxyInnerRad = true;
+		}
+		else RestoreInnerRadForced();
+	}
+
+	private void RestoreInnerRadForced()
+	{
+		if (AudioPlayerNode == null || !IsInstanceValid(AudioPlayerNode))
+		{ _forceProxyInnerRad = false; return; }
+
+		if (_proxyHasInner && _forceProxyInnerRad && _proxyInnerRad >= 0.0f)
+		{ AudioPlayerNode.InnerRadius = _proxyInnerRad; }
+
+		_forceProxyInnerRad = true;
 	}
 
 	private Vector3 GetProxyTarget(Vector3 worldOrigin)
 	{
-		// TODO: Get proxy world target
-		return Vector3.Zero;
+		if (!_hasValidPath || _currentPath.Length < 2) { _proxyInBackoff = false; return worldOrigin; }
+		if (ProxyOnlyWhenBlocked && _isDirectPath) { _proxyInBackoff = false; return worldOrigin; }
+
+		int idx = Math.Min(Math.Max(ProxyWaypointIndex, 1), _currentPath.Length - 1);
+		Vector3 tarPoint = _currentPath[idx];
+
+		if (ProxySpringArmEnabled) { _proxyInBackoff = false; return tarPoint; }
+		if (!EnableProxyListenerBackoff || _isDirectPath) { _proxyInBackoff = false; return tarPoint; }
+
+		Vector3 listenerPos = _currentPath[^1];
+		Vector3 proxyCheckPos = tarPoint;
+		if (_proxyReady) proxyCheckPos = _currentProxy;
+		float distToList = proxyCheckPos.DistanceTo(listenerPos);
+		float releaseDist = MathF.Max(ProxyBackoffReleaseDistance, ProxyMinListenerDistance);
+
+		if (_proxyInBackoff && distToList >= releaseDist) _proxyInBackoff = false;
+		else if (distToList < ProxyMinListenerDistance) _proxyInBackoff = true;
+
+		if (_proxyInBackoff)
+		{
+			float backoffDist = MathF.Max(ProxyBackoffPathDistance, ProxyMinListenerDistance);
+			tarPoint = GetPointAlongPath(_currentPath, backoffDist); 
+		}
+		
+		return tarPoint;
 	}
 
 	/// <summary>
@@ -2073,13 +2074,88 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	/// </summary>
 	private void UpdateProxyOccl(bool refActive)
 	{
-		// TODO: Update proxy occlusion transition support.
+		if (AudioPlayerNode == null || !IsInstanceValid(AudioPlayerNode))
+		{ _wasRefProxyActive = refActive; return; }
+
+		if (!ProxyOcclusionTransitionSmoothing)
+		{
+			AudioPlayerNode.ClearExternalOcclusionHold();
+			_wasRefProxyActive = refActive;
+			return;
+		}
+
+		if (refActive) AudioPlayerNode.ClearExternalOcclusionHold();
+		else if (_wasRefProxyActive && ProxyOcclusionHoldSeconds > 0.0f)
+		{ AudioPlayerNode.SetExternalOcclusionHold(ProxyOcclusionHoldSeconds); }
+
+		if (!refActive && _proxyReady && _currentProxy.DistanceTo(_targetProxy) > ProxyOcclusionHoldMoveThreshold)
+		{ AudioPlayerNode.SetExternalOcclusionHold(ProxyOcclusionHoldSeconds); }
+
+		_wasRefProxyActive = refActive;
 	}
 
 	private Vector3 ApplyProxySpringTarget(double delta, Vector3 baseTar)
 	{
-		// TODO: Apply Proxy Spring Arm Target
-		return Vector3.Zero;
+		if (_currentPath.Length < 2) { _springArmReady = false; return baseTar; }
+
+		float pathTot = _currentPathLen;
+		if (pathTot <= 0.001) { _springArmReady = false; return baseTar; }
+
+		Vector3 listenerPos = _currentPath[^1];
+		float baseAlong = GetDistAlongPath(_currentPath, baseTar);
+		float desFromEnd = Math.Clamp(pathTot - baseAlong, 0.0f, pathTot);
+
+		Vector3 probe = baseTar;
+		if (_proxyReady) probe = _currentProxy;
+
+		float curToList = probe.DistanceTo(listenerPos);
+		float minDist = MathF.Max(ProxySpringMinDistance, 0.0f);
+
+		if (curToList < minDist)
+		{
+			float breach = minDist - curToList;
+			desFromEnd = MathF.Max(desFromEnd, minDist + breach * ProxySpringPushStrength);
+		}
+
+		if (!_springArmReady) { _springArmDistFromEnd = desFromEnd; _springArmReady = true; }
+		else
+		{
+			float speed = ProxySpringReturnSpeed;
+			if (desFromEnd > _springArmDistFromEnd) speed = ProxySpringPushSpeed;
+
+			float lerpAmt = Math.Clamp((float)delta * speed, 0.0f, 1.0f);
+			_springArmDistFromEnd = float.Lerp(_springArmDistFromEnd, desFromEnd, lerpAmt);
+		}
+
+		_springArmDistFromEnd = Math.Clamp(_springArmDistFromEnd, 0.0f, pathTot);
+		return GetPointAlongPath(_currentPath, _springArmDistFromEnd);
+	}
+
+	private float GetDistAlongPath(Vector3[] worldPath, Vector3 worldPoint)
+	{
+		if (worldPath.Length < 2) return 0.0f;
+
+		float bestDist = float.PositiveInfinity;
+		float bestAlong = 0.0f;
+		float accum = 0.0f;
+
+		for (int i = 0; i < worldPath.Length - 1; i++)
+		{
+			Vector3 a = worldPath[i];
+			Vector3 b = worldPath[i + 1];
+			Vector3 ab = b - a;
+			float segLenSq = ab.LengthSquared();
+
+			if (segLenSq <= 0.000001) continue;
+
+			float t = Math.Clamp((worldPoint - a).Dot(ab) / segLenSq, 0.0f, 1.0f);
+			Vector3 proj = a + ab * t;
+			float d = proj.DistanceTo(worldPoint);
+			float segLen = MathF.Sqrt(segLenSq);
+			if (d < bestDist) { bestDist = d; bestAlong = accum + segLen * t; }
+			accum += segLen;
+		}
+		return bestAlong;
 	}
 
 	#endregion
@@ -2099,11 +2175,11 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		_timeSinceRecompute = 0.0;
 	}
 
-	private Node3D FindAudioPlayer(Node node)
+	private SpatialAudioPlayer3D FindAudioPlayer(Node node)
 	{
 		foreach (Node child in node.GetChildren())
 		{
-			if (child is AudioStreamPlayer3D) return child as Node3D;
+			if (child is SpatialAudioPlayer3D result) return result;
 		}
 
 		return null;
@@ -2149,7 +2225,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	/// <summary>
 	/// Get a point along the path from the end.
 	/// </summary>
-	private Vector3 GetPointAlongPath()
+	private Vector3 GetPointAlongPath(Vector3[] currentPath, float backoffDist)
 	{
 		// TODO: Get point along path
 		return Vector3.Zero;
@@ -2207,7 +2283,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		if (!PreviewPathingInEditor) { SetProcess(true); ResetAudioProxyToOrigin(); }
 		UpdateConfigurationWarnings();
-		UpdateAudioProxy(0.0f);
+		UpdateAudio(0.0f);
 	}
 
 	private bool IsEditorSelected()
@@ -2262,6 +2338,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		if (AudioPlayerNode != null && IsInstanceValid(AudioPlayerNode)) return AudioPlayerNode;
 		if (AutoFindAudioPlayerChild) return FindAudioPlayer(this);
+		RefreshProxyRadius();
 		return null;
 	}
 
@@ -2349,7 +2426,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			PropertyName.ProxyWaypointIndex, PropertyName.AudioProxyLerpSpeed, PropertyName.AudioProxyBackoffLerpSpeed,
 			PropertyName.AudioProxyHeightOffset, PropertyName.RestoreAudioToOriginWhenDisabled, PropertyName.ProxyForceInnerRadiusOutsideSourceZone,
 			PropertyName.EnableProxyListenerBackoff, PropertyName.ProxyMinListenerDistance, PropertyName.ProxyBackoffReleaseDistance,
-			PropertyName.ProxyBackoffPathDistance, PropertyName.ProxySpringArmEnabled, PropertyName.ProxSpringMinDistance,
+			PropertyName.ProxyBackoffPathDistance, PropertyName.ProxySpringArmEnabled, PropertyName.ProxySpringMinDistance,
 			PropertyName.ProxySpringPushStrength, PropertyName.ProxySpringPushSpeed, PropertyName.ProxySpringReturnSpeed,
 			PropertyName.ApplyRefectionVolumeLoss, PropertyName.ReflectionLossDbPerMeter, PropertyName.ReflectionLossPower,
 			PropertyName.ReflectionMaxLossDb, PropertyName.ProxyOcclusionTransitionSmoothing, PropertyName.ProxyOcclusionHoldSeconds,
@@ -2400,7 +2477,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 		List<StringName> noArmProps =
 		[
-			PropertyName.ProxSpringMinDistance, PropertyName.ProxySpringPushStrength,
+			PropertyName.ProxySpringMinDistance, PropertyName.ProxySpringPushStrength,
 			PropertyName.ProxySpringPushSpeed, PropertyName.ProxySpringReturnSpeed,
 		];
 		if (MoveAudioPlayer && !ProxySpringArmEnabled)
@@ -2516,6 +2593,27 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private void UpdateExtNavDebug(bool refActive, Vector3 worldOrigin, Vector3 worldListener)
 	{
 		// TODO: Update external navigation debug.
+	}
+
+	private void ResetAudioProxyToOrigin()
+	{
+		if (AudioPlayerNode == null || !IsInstanceValid(AudioPlayerNode))
+		{ GetAudioPlayer(); if (AudioPlayerNode == null) return; }
+
+		Vector3 worldOrigin = ResolveWorldOrigin();
+		Vector3 worldListener = _lastWorldTarget;
+		if (_hasValidPath && _currentPath.Length > 0) worldListener = _currentPath[^1];
+
+		AudioPlayerNode.GlobalPosition = worldOrigin;
+		_currentProxy = worldOrigin;
+		_targetProxy = worldOrigin;
+		_proxyReady = true;
+		_proxyInBackoff = false;
+		_springArmReady = false;
+		UpdateProxyInnerRadius(false, worldOrigin, worldOrigin);
+		UpdateProxyOccl(false);
+		ApplyRefVolOffset(0.0f);
+		UpdateExtNavDebug(false, worldOrigin, worldListener);
 	}
 
 	#endregion
