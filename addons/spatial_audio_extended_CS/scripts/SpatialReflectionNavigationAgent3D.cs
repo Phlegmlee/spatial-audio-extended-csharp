@@ -2131,33 +2131,6 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		return GetPointAlongPath(_currentPath, _springArmDistFromEnd);
 	}
 
-	private float GetDistAlongPath(Vector3[] worldPath, Vector3 worldPoint)
-	{
-		if (worldPath.Length < 2) return 0.0f;
-
-		float bestDist = float.PositiveInfinity;
-		float bestAlong = 0.0f;
-		float accum = 0.0f;
-
-		for (int i = 0; i < worldPath.Length - 1; i++)
-		{
-			Vector3 a = worldPath[i];
-			Vector3 b = worldPath[i + 1];
-			Vector3 ab = b - a;
-			float segLenSq = ab.LengthSquared();
-
-			if (segLenSq <= 0.000001) continue;
-
-			float t = Math.Clamp((worldPoint - a).Dot(ab) / segLenSq, 0.0f, 1.0f);
-			Vector3 proj = a + ab * t;
-			float d = proj.DistanceTo(worldPoint);
-			float segLen = MathF.Sqrt(segLenSq);
-			if (d < bestDist) { bestDist = d; bestAlong = accum + segLen * t; }
-			accum += segLen;
-		}
-		return bestAlong;
-	}
-
 	#endregion
 
 	#region Utils - Helpers
@@ -2194,7 +2167,12 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private Node FindCollisionAncestor(Node node)
 	{
-		// TODO: FindCollisionAncestor
+		Node cur = node;
+		while (cur != null)
+		{
+			if (cur is CollisionObject3D) return cur;
+			cur = cur.GetParent();
+		}
 		return null;
 	}
 
@@ -2225,19 +2203,60 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	/// <summary>
 	/// Get a point along the path from the end.
 	/// </summary>
-	private Vector3 GetPointAlongPath(Vector3[] currentPath, float backoffDist)
+	private Vector3 GetPointAlongPath(Vector3[] worldPath, float backoffDist)
 	{
-		// TODO: Get point along path
-		return Vector3.Zero;
+		if (worldPath.IsEmpty()) return Vector3.Zero;
+		if (worldPath.Length == 1) return worldPath[0];
+
+		float remain = MathF.Max(backoffDist, 0.0f);
+
+		for (int i = 0; i < worldPath.Length - 1; i++)
+		{
+			Vector3 segEnd = worldPath[i];
+			Vector3 segStart = worldPath[i - 1];
+			float segLen = segEnd.DistanceTo(segStart);
+			if (segLen <= 0.0001f) continue;
+			if (remain <= segLen)
+			{
+				float amt = remain / segLen;
+				segEnd = segEnd with
+				{
+					X = float.Lerp(segEnd.X, segStart.X, amt),
+					Y = float.Lerp(segEnd.Y, segStart.Y, amt),
+					Z = float.Lerp(segEnd.Z, segStart.Z, amt),
+				};
+				return segEnd;
+			}
+			remain -= segLen;
+		}
+		return worldPath[0];
 	}
 
-	/// <summary>
-	/// Get the distance from start to a point on path.
-	/// </summary>
-	private float GetDistanceStartToPoint()
+	private float GetDistAlongPath(Vector3[] worldPath, Vector3 worldPoint)
 	{
-		// TODO: Get distance from start to point on path
-		return 0.0f;
+		if (worldPath.Length < 2) return 0.0f;
+
+		float bestDist = float.PositiveInfinity;
+		float bestAlong = 0.0f;
+		float accum = 0.0f;
+
+		for (int i = 0; i < worldPath.Length - 1; i++)
+		{
+			Vector3 a = worldPath[i];
+			Vector3 b = worldPath[i + 1];
+			Vector3 ab = b - a;
+			float segLenSq = ab.LengthSquared();
+
+			if (segLenSq <= 0.000001) continue;
+
+			float t = Math.Clamp((worldPoint - a).Dot(ab) / segLenSq, 0.0f, 1.0f);
+			Vector3 proj = a + ab * t;
+			float d = proj.DistanceTo(worldPoint);
+			float segLen = MathF.Sqrt(segLenSq);
+			if (d < bestDist) { bestDist = d; bestAlong = accum + segLen * t; }
+			accum += segLen;
+		}
+		return bestAlong;
 	}
 
 	/// <summary>
