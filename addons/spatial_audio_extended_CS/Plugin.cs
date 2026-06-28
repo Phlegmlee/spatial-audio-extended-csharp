@@ -112,10 +112,5 @@ public partial class Plugin : EditorPlugin
 	{
 		return EditorSelections;
 	}
-
-	public static Viewport GetEditorViewport3D()
-	{
-		return editorInterface.GetEditorViewport3D();
-	}
 }
 #endif

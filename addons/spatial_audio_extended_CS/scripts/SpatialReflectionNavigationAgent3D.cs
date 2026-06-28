@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 namespace SpatialAudioCS;
 
@@ -595,7 +596,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		set => _ignoreListenerBody = value;
 	}
 
-	private Godot.Collections.Array<Node3D> _excludedCollisionNodes;
+	private Godot.Collections.Array<Node3D> _excludedCollisionNodes = [];
 	[Export]
 	public Godot.Collections.Array<Node3D> ExcludedCollisionNodes
 	{
@@ -1109,6 +1110,10 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		PropertyName.IgnoreListenerBody,
 		PropertyName.ExcludedCollisionNodes,
 	];
+
+#if TOOLS
+	private EditorInterface editorInterface = null;
+#endif
 
 	#endregion
 
@@ -1771,7 +1776,36 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private List<Vector3I> GetScanNeighborDirs(ScanNeighborModeEnum scanNeighborMode)
 	{
-		throw new NotImplementedException();
+		List<Vector3I> result = [];
+
+		foreach (int x in Enumerable.Range(-1, 3))
+		{
+			foreach (int y in Enumerable.Range(-1, 3))
+			{
+				foreach (int z in Enumerable.Range(-1, 3))
+				{
+					Vector3I n = new(x, y, z);
+					if (n == Vector3I.Zero) continue;
+					var manhattan = Math.Abs(x) + Math.Abs(y) + Math.Abs(z);
+					switch (scanNeighborMode)
+					{
+						case ScanNeighborModeEnum.Axis_6:
+							if (manhattan == 1) result.Add(n);
+							break;
+
+						case ScanNeighborModeEnum.Diagonal_18:
+							if (manhattan <= 2) result.Add(n);
+							break;
+
+						case ScanNeighborModeEnum.Full_26:
+							result.Add(n);
+							break;
+					}
+				}
+			}
+		}
+
+		return result;
 	}
 
 	private void AddEdge(int a, int b)
@@ -2291,7 +2325,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 		if (Engine.IsEditorHint())
 		{
-			Viewport vp = Plugin.GetEditorViewport3D();
+			Viewport vp = editorInterface.GetEditorViewport3D();
 			if (vp != null) return vp.GetCamera3D();
 			return null;
 		}
@@ -2323,6 +2357,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		if (!PreviewPathingInEditor) { SetProcess(true); ResetAudioProxyToOrigin(); }
 		UpdateConfigurationWarnings();
 		UpdateAudio(0.0f);
+
+		editorInterface = EditorInterface.Singleton;
 	}
 
 	private bool IsEditorSelected()
