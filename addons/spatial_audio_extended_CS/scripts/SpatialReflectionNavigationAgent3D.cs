@@ -2264,7 +2264,13 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	/// </summary>
 	private void UpdateRefMod(Vector3 worldOrigin, Vector3 currentProxy)
 	{
-		// TODO: Update reflection audio modulation
+		if (!ApplyRefectionVolumeLoss) { ApplyRefVolOffset(0.0f); return; }
+		if (_isDirectPath || _currentPath.Length < 2) { ApplyRefVolOffset(0.0f); return; }
+
+		float routeDist = GetDistAlongPath(_currentPath, currentProxy);
+		float shapeDist = MathF.Pow(MathF.Max(routeDist, 0.0f), ReflectionLossPower);
+		float lossDb = MathF.Min(shapeDist * ReflectionLossDbPerMeter, ReflectionMaxLossDb);
+		ApplyRefVolOffset(-lossDb);
 	}
 
 	/// <summary>
@@ -2272,7 +2278,11 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	/// </summary>
 	private void ApplyRefVolOffset(float dB)
 	{
-		// TODO: Apply the reflection volume offset dB.
+		if (AudioPlayerNode == null || !IsInstanceValid(AudioPlayerNode)) return;
+		if (Math.Abs(dB - _lastRefVolOffsetDb) < 0.05f) return;
+		_lastRefVolOffsetDb = dB;
+
+		AudioPlayerNode.SetExternalVolumeDbOffset(dB);
 	}
 
 	private Node3D GetTargetNode()
@@ -2290,8 +2300,18 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	
 	private Vector3 RandomPointInSphere(RandomNumberGenerator rng, float navigationRadius)
 	{
-		// TODO: RndPointInSphere
-		throw new NotImplementedException();
+		Vector3 p = Vector3.Zero;
+		do
+		{
+			p = new
+			(
+				rng.RandfRange(-1.0f, 1.0f),
+				rng.RandfRange(-1.0f, 1.0f),
+				rng.RandfRange(-1.0f, 1.0f)
+			);
+		} while (p.LengthSquared() >= 1.0f);
+
+		return p;
 	}
 
 	#endregion
