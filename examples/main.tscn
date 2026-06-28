@@ -13,8 +13,8 @@
 [ext_resource type="AudioStream" uid="uid://c8oidjqmx3yvl" path="res://examples/assets/sounds/jazz/tatamusic-jazz-jazz-music-485401.mp3 (drum).mp3" id="8_naqvs"]
 [ext_resource type="AudioStream" uid="uid://nxhtkrd12cqn" path="res://examples/assets/sounds/jazz/tatamusic-jazz-jazz-music-485401.mp3 (electric_guitar).mp3" id="9_f7sj4"]
 [ext_resource type="AudioStream" uid="uid://c4qmrek4m5y2r" path="res://examples/assets/sounds/jazz/tatamusic-jazz-jazz-music-485401.mp3 (synthesizer).mp3" id="10_rrq2r"]
-[ext_resource type="Script" uid="uid://cv8ykukq6ad33" path="res://addons/spatial_audio_extended_CS/scripts/SpatialReflectionNavigationAgent3D.cs" id="14_rrq2r"]
 [ext_resource type="Resource" uid="uid://biw3dmp7j8cw8" path="res://addons/spatial_audio_extended_CS/materials/concrete.tres" id="14_teuft"]
+[ext_resource type="Script" uid="uid://cv8ykukq6ad33" path="res://addons/spatial_audio_extended_CS/scripts/SpatialReflectionNavigationAgent3D.cs" id="15_teuft"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_pw243"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -367,10 +367,21 @@ AcousticMaterial = ExtResource("14_teuft")
 [node name="Speaker" parent="StaticBody3D" unique_id=1920334434 instance=ExtResource("4_w7hkg")]
 transform = Transform3D(-1, -8.742278e-08, -3.821371e-15, 0, -4.371139e-08, 1, -8.742278e-08, 1, 4.371139e-08, -9.013094, -1.5, 8.207264)
 
-[node name="SpatialReflectionNavigationAgent3D" type="Node3D" parent="StaticBody3D/Speaker" unique_id=611606533]
-script = ExtResource("14_rrq2r")
-ScanNeighborMode = 2
+[node name="SpatialReflectionNavigationAgent3D" type="Node3D" parent="StaticBody3D/Speaker" unique_id=388501787]
+script = ExtResource("15_teuft")
+NavigationProfile = 2
+GraphRecenterDistance = 1.5
+ScanCellSize = 0.9
+ScannedMaxExtent = 28
+ScanCellInset = 0.1
 MoveAudioPlayer = true
+PreviewPathingInEditor = true
+DebugDrawBounds = true
+DebugDrawPath = true
+DebugDrawDirectLineWhenBlocked = true
+DebugDrawGraphPoints = true
+DebugDrawGraphEdges = true
+DebugDrawAudioProxy = true
 metadata/_custom_type_script = "uid://cv8ykukq6ad33"
 
 [node name="SpatialAudioPlayer3D" type="AudioStreamPlayer3D" parent="StaticBody3D/Speaker/SpatialReflectionNavigationAgent3D" unique_id=1340386460]
@@ -379,11 +390,7 @@ autoplay = true
 script = ExtResource("1_d2j2t")
 FalloffDistance = 30.0
 UserAttenuationCurve = SubResource("Curve_f7sj4")
-EnableDebug = true
 metadata/_custom_type_script = "uid://dda61d0ai53jd"
-
-[node name="AcousticDebugger" type="Node3D" parent="StaticBody3D/Speaker/SpatialReflectionNavigationAgent3D/SpatialAudioPlayer3D" unique_id=2122463265]
-script = ExtResource("4_xyviw")
 
 [editable path="BigExplosion"]
 [editable path="BigExplosion/Button/3D_GUI"]

@@ -1115,6 +1115,12 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private EditorInterface editorInterface = null;
 #endif
 
+#if DEBUG
+	ImmediateMesh _debugMesh = null;
+	MeshInstance3D _debugInstance = null;
+	bool _debugWasDrawing = false;
+#endif
+
 	#endregion
 
 	#region Gameplay Logic
@@ -2637,32 +2643,159 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private void SharedDebugMesh()
 	{
-		// TODO: SharedDebugMesh
+		if (_debugMesh != null && _debugInstance != null) return;
+
+		_debugMesh = new();
+
+		StandardMaterial3D mat = new()
+		{
+			ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			VertexColorUseAsAlbedo = true,
+			Transparency = BaseMaterial3D.TransparencyEnum.Alpha
+		};
+
+		_debugInstance = new()
+		{
+			Name = "ReflectionNavDebug",
+			Mesh = _debugMesh,
+			MaterialOverride = mat
+		};
+
+		AddChild(_debugInstance);
 	}
 
 	private void DrawDebug(bool editorPreview = false)
 	{
-		// TODO: Draw debug
+		if (_debugMesh == null || _debugInstance == null) 
+		{ SharedDebugMesh(); if (_debugMesh == null) return; }
+
+		bool showBounds = DebugDrawBounds || editorPreview;
+		bool showPath = DebugDrawPath || editorPreview;
+		bool wantsAny = showBounds
+		|| showPath
+		|| DebugDrawGraphPoints
+		|| DebugDrawGraphEdges
+		|| (DebugDrawAudioProxy && MoveAudioPlayer);
+
+		if (!wantsAny)
+		{
+			_debugMesh.ClearSurfaces();
+			_debugWasDrawing = false;
+			_debugInstance.Hide();
+			return;
+		}
+
+		_debugInstance.Show();
+		_debugWasDrawing = true;
+
+		_debugMesh.ClearSurfaces();
+		_debugMesh.SurfaceBegin(Mesh.PrimitiveType.Lines);
+
+		if (showBounds) DrawWireframeSphere(ResolveWorldOrigin(), NavigationRadius, DebugBoundsColor);
+
+		if (showPath && _hasValidPath && _currentPath.Length >= 2) DrawPolyline(_currentPath, DebugPathColor);
+		else if (showPath && DebugDrawDirectLineWhenBlocked) DrawPolyline([_lastWorldOrigin, _lastWorldTarget], DebugBlockedColor);
+
+		if (DebugDrawGraphPoints)
+		{ foreach (Vector3 p in _graphPoints) DrawCross(p, 0.06f, DebugGraphColor); }
+
+		if (DebugDrawGraphEdges)
+		{
+			for (int i = 0; i < _graphPoints.Count; i++)
+			{
+				foreach (int j in _graphEdges[i])
+				{
+					if (j <= i) continue;
+					DrawSegment(_graphPoints[i], _graphPoints[j], DebugGraphColor);
+				}
+			}
+		}
+
+		if (DebugDrawAudioProxy && AudioPlayerNode != null && MoveAudioPlayer)
+		{
+			DrawWireframeSphere(AudioPlayerNode.GlobalPosition, DebugAudioProxyRadius, DebugAudioProxyColor);
+			DrawCross(AudioPlayerNode.GlobalPosition, DebugAudioProxyRadius, DebugAudioProxyColor);
+		}
+
+		_debugMesh.SurfaceEnd();
 	}
 
-	private void DrawPolyline()
+	private void DrawPolyline(Vector3[] points, Color color)
 	{
-		// TODO: Draw polyline
+		for (int i = 0; i < points.Length - 1; i++)
+		{
+			DrawSegment(points[i], points[i + 1], color);
+		}
 	}
 
-	private void DrawSegment()
+	private void DrawSegment(Vector3 aWorld, Vector3 bWorld, Color color)
 	{
-		// TODO: Draw segment
+		Vector3 a = ToLocal(aWorld);
+		Vector3 b = ToLocal(bWorld);
+		_debugMesh.SurfaceSetColor(color);
+		_debugMesh.SurfaceAddVertex(a);
+		_debugMesh.SurfaceSetColor(color);
+		_debugMesh.SurfaceAddVertex(b);
 	}
 
-	private void DrawCross()
+	private void DrawCross(Vector3 centerWorld, float size, Color color)
 	{
-		// TODO: DrawCross
+		Vector3 c = ToLocal(centerWorld);
+		Vector3 x0 = new(-size, 0.0f, 0.0f);
+		Vector3 x1 = new(size, 0.0f, 0.0f);
+		Vector3 y0 = new(0.0f, -size, 0.0f);
+		Vector3 y1 = new(0.0f, size, 0.0f);
+		Vector3 z0 = new(0.0f, 0.0f, -size);
+		Vector3 z1 = new(0.0f, 0.0f, size);
+		List<Vector3> points = [x0, x1, y0, y1, z0, z1];
+		foreach (Vector3 p in points)
+		{
+			_debugMesh.SurfaceSetColor(color);
+			_debugMesh.SurfaceAddVertex(p + c);
+		}
 	}
 	
-	private void DrawWireframeSphere()
+	private void DrawWireframeSphere(Vector3 center, float radius, Color color, int segments = 64)
 	{
-		// TODO: Draw wireframe sphere
+		for (int plane = 0; plane < 3; plane++)
+		{
+			for (int i = 0; i < segments; i++)
+			{
+				float a0 = i / segments * MathF.Tau;
+				float a1 = (i + 1) / segments * MathF.Tau;
+				Vector3 p0;
+				Vector3 p1;
+				switch (plane)
+				{
+					// XZ (Horizontal)
+					case 0:
+						p0 = center + new Vector3(MathF.Cos(a0) * radius, 0.0f, MathF.Sin(a0) * radius);
+						p1 = center + new Vector3(MathF.Cos(a1) * radius, 0.0f, MathF.Sin(a1) * radius);
+						break;
+
+					// XY (Front)
+					case 1:
+						p0 = center + new Vector3(MathF.Cos(a0) * radius, MathF.Sin(a0) * radius, 0.0f);
+						p1 = center + new Vector3(MathF.Cos(a1) * radius, MathF.Sin(a1) * radius, 0.0f);
+						break;
+
+					// YZ (Side)
+					case 2:
+						p0 = center + new Vector3(0.0f, MathF.Cos(a0) * radius, MathF.Sin(a0) * radius);
+						p1 = center + new Vector3(0.0f, MathF.Cos(a1) * radius, MathF.Sin(a1) * radius);
+						break;
+
+					default:
+						p0 = new();
+						p1 = new();
+						break;
+				}
+				_debugMesh.SurfaceSetColor(color);
+				_debugMesh.SurfaceAddVertex(p0);
+				_debugMesh.SurfaceSetColor(color);
+				_debugMesh.SurfaceAddVertex(p1);
+			}
+		}
 	}
 
 	private void UpdateExtNavDebug(bool refActive, Vector3 worldOrigin, Vector3 worldListener)
