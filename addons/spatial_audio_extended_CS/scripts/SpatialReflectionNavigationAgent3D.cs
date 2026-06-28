@@ -145,11 +145,11 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		set => _staticRecomputeInterval = value;
 	}
 
-	private float _navigationRadius = 0.18f;
+	private float _navigationRadius = 18.0f;
 	/// <summary>
 	/// Spherical bounds radius used for airborne sample points around the graph anchor.
 	/// </summary>
-	[Export(PropertyHint.Range, "0.0f, 5.0f, 0.01f, suffix:m")]
+	[Export(PropertyHint.Range, "0.5f, 512.0f, 0.1f, suffix:m")]
 	public float NavigationRadius
 	{
 		get => _navigationRadius;
