@@ -1784,11 +1784,12 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		List<Vector3I> result = [];
 
-		foreach (int x in Enumerable.Range(-1, 3))
+		
+		for (int x = -1; x < 2; x++)
 		{
-			foreach (int y in Enumerable.Range(-1, 3))
+			for (int y = -1; y < 2; y++)
 			{
-				foreach (int z in Enumerable.Range(-1, 3))
+				for (int z = -1; z < 2; z++)
 				{
 					Vector3I n = new(x, y, z);
 					if (n == Vector3I.Zero) continue;
