@@ -1151,6 +1151,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 #endif
 
 	internal bool EffectsEnabled = true;
+	internal SpatialAudioDebug AcousticDebugger = null;
 
 	#endregion
 
@@ -2176,14 +2177,24 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 #if DEBUG
 	private void OnEnableDebugToggled(bool value)
 	{
-		if (!value) return;
-
-		SpatialAudioDebug AcousticDebugger = new SpatialAudioDebug()
+		switch (value)
 		{
-			Name = nameof(AcousticDebugger)
-		};
+			case true:
+				AcousticDebugger = new()
+				{
+					Name = nameof(AcousticDebugger)
+				};
+				AddChildInEditor(this, AcousticDebugger);
+				GD.Print(IsInstanceValid(AcousticDebugger));
+				AcousticDebugger = (SpatialAudioDebug)GetChild(0);
+				GD.Print(AcousticDebugger);
+				break;
 
-		AddChildInEditor(this, AcousticDebugger);
+			case false:
+				if (AcousticDebugger == null) break;
+				AcousticDebugger.QueueFree();
+				break;
+		}
 	}
 #endif
 	#endregion

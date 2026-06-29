@@ -123,17 +123,6 @@ public partial class SpatialAudioDebug : Node3D
 		set => _debugToggleShapesKey = value;
 	}
 
-	// private bool _effectsEnabled = true;
-	// [Export]
-	// public bool EffectsEnabled
-	// {
-	// 	get => _effectsEnabled;
-	// 	set
-	// 	{
-	// 		_effectsEnabled = value;
-	// 	}
-	// }
-
 	#endregion
 
 	#region Internal
@@ -272,8 +261,6 @@ public partial class SpatialAudioDebug : Node3D
 	/// </summary>
 	public override void _ExitTree()
 	{
-		if (_parentAudioPlayer != null) _parentAudioPlayer.EnableDebugToggled -= OnEnableDebugToggled;
-
 		if (IsInstanceValid(_debugPanel))
 		{
 			_debugPanel.GetParent()?.RemoveChild(_debugPanel);
@@ -1074,15 +1061,6 @@ public partial class SpatialAudioDebug : Node3D
 
 	#region Event Handlers
 
-	private void OnEnableDebugToggled(bool value)
-	{
-		if (value) return;
-
-		if (!IsInsideTree()) return;
-
-		QueueFree();
-	}
-
 	private void OnDebugMinimizeToggled()
 	{
 		_debugMinimized = !_debugMinimized;
@@ -1137,7 +1115,6 @@ public partial class SpatialAudioDebug : Node3D
 		// ProcessPhysicsPriority = 100;
 
 		_parentAudioPlayer = GetParent() as SpatialAudioPlayer3D;
-		_parentAudioPlayer.EnableDebugToggled += OnEnableDebugToggled;
 
 		if (DebugDrawRays || DebugDrawRadius || DebugDrawPlayingState) SetupDebugMesh();
 	}
