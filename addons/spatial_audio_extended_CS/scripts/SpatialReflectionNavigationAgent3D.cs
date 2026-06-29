@@ -2800,7 +2800,31 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private void UpdateExtNavDebug(bool refActive, Vector3 worldOrigin, Vector3 worldListener)
 	{
-		// TODO: Update external navigation debug.
+		if (audioDebugger == null || !IsInstanceValid(audioDebugger)) return;
+
+		if (!refActive)
+		{
+			audioDebugger.ClearExtNavDebugData();
+			audioDebugger.SetExtNavDebugData(false, []);
+			return;
+		}
+
+		float dirDist = MathF.Max(worldOrigin.DistanceTo(worldListener), 0.001f);
+		float detRatio = _currentPathLen / dirDist;
+
+		Dictionary<string, object> info = [];
+
+		info.TryAdd("profile", NavigationProfile);
+		info.TryAdd("agent_name", Name);
+		info.TryAdd("path_points", _currentPath.Length);
+		info.TryAdd("graph_points", _graphPoints);
+		info.TryAdd("graph_edges", _graphEdges);
+		info.TryAdd("path_length", _currentPathLen);
+		info.TryAdd("direct_distance", dirDist);
+		info.TryAdd("detour_ratio", detRatio);
+		info.TryAdd("proxy_to_listener", _currentProxy.DistanceTo(worldListener));
+		info.TryAdd("proxy_to_origin", _currentProxy.DistanceTo(worldOrigin));
+		info.TryAdd("proxy_to_target", _currentProxy.DistanceTo(_targetProxy));
 	}
 
 	private void ResetAudioProxyToOrigin()

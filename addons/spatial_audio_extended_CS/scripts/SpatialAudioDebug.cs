@@ -151,18 +151,18 @@ public partial class SpatialAudioDebug : Node3D
 
 	private Dictionary<int, bool> _debugRayReflectiosExpanded = [];
 	private bool _externalNavigationDebugActive = false;
-	private Dictionary<string, Variant> _externalNavigationDebug = [];
+	private Dictionary<string, object> _externalNavigationDebug = [];
 
 	private CanvasLayer _debugSharedLayer = null;
 	private ScrollContainer _debugSharedScroll = null;
 	private VBoxContainer _debugSharedVbox = null;
 
-	internal void SetExtNavDebugData(bool active, Dictionary<string, Variant> info)
+	internal void SetExtNavDebugData(bool active, Dictionary<string, object> info)
 	{
 		_externalNavigationDebugActive = active;
 		if (active)
 		{
-			_externalNavigationDebug = new Dictionary<string, Variant>(info);
+			_externalNavigationDebug = new Dictionary<string, object>(info);
 		}
 		else
 		{
@@ -427,24 +427,24 @@ public partial class SpatialAudioDebug : Node3D
 	{
 		if (!_externalNavigationDebugActive) return "";
 
-		Dictionary<string, Variant> d = _externalNavigationDebug;
+		Dictionary<string, object> info = _externalNavigationDebug;
 
-		d.TryGetValue("profile", out Variant profile);
-		d.TryGetValue("agent_name", out Variant nodeName);
-		d.TryGetValue("path_points", out Variant pathPoints);
-		d.TryGetValue("graph_points", out Variant graphPoints);
-		d.TryGetValue("graph_edges", out Variant graphEdges);
-		d.TryGetValue("path_length", out Variant pathLength);
-		d.TryGetValue("direct_distance", out Variant directDistance);
-		d.TryGetValue("detour_ratio", out Variant detourRatio);
-		d.TryGetValue("proxy_to_listener", out Variant proxyToListener);
-		d.TryGetValue("proxy_to_origin", out Variant proxyToOrigin);
-		d.TryGetValue("proxy_to_target", out Variant proxyToTarget);
-		d.TryGetValue("proxy_backoff_active", out Variant proxyBackoffActive);
-		d.TryGetValue("spring_arm_active", out Variant springArmActive);
-		d.TryGetValue("spring_arm_distance_from_end", out Variant springArmDistance);
-		d.TryGetValue("proxy_waypoint_index", out Variant proxyWaypointIndex);
-		d.TryGetValue("update_hz", out Variant updateHz);
+		info.TryGetValue("profile", out object profile);
+		info.TryGetValue("agent_name", out object nodeName);
+		info.TryGetValue("path_points", out object pathPoints);
+		info.TryGetValue("graph_points", out object graphPoints);
+		info.TryGetValue("graph_edges", out object graphEdges);
+		info.TryGetValue("path_length", out object pathLength);
+		info.TryGetValue("direct_distance", out object directDistance);
+		info.TryGetValue("detour_ratio", out object detourRatio);
+		info.TryGetValue("proxy_to_listener", out object proxyToListener);
+		info.TryGetValue("proxy_to_origin", out object proxyToOrigin);
+		info.TryGetValue("proxy_to_target", out object proxyToTarget);
+		info.TryGetValue("proxy_backoff_active", out object proxyBackoffActive);
+		info.TryGetValue("spring_arm_active", out object springArmActive);
+		info.TryGetValue("spring_arm_distance_from_end", out object springArmDistance);
+		info.TryGetValue("proxy_waypoint_index", out object proxyWaypointIndex);
+		info.TryGetValue("update_hz", out object updateHz);
 
 		string txt = $"";
 		txt += $"Agent               {nodeName} \n";
