@@ -2185,9 +2185,7 @@ public partial class SpatialAudioPlayer3D : AudioStreamPlayer3D
 					Name = nameof(AcousticDebugger)
 				};
 				AddChildInEditor(this, AcousticDebugger);
-				GD.Print(IsInstanceValid(AcousticDebugger));
 				AcousticDebugger = (SpatialAudioDebug)GetChild(0);
-				GD.Print(AcousticDebugger);
 				break;
 
 			case false:

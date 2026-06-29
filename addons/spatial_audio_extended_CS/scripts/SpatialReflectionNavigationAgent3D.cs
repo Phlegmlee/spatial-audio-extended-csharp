@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Godot;
 namespace SpatialAudioCS;
 
@@ -1066,8 +1065,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	float _proxyInnerRad = -1.0f;
 	bool _forceProxyInnerRad = false;
 
-	private PhysicsRayQueryParameters3D _rayQuery;
-	private PhysicsShapeQueryParameters3D _shapeQuery;
+	private PhysicsRayQueryParameters3D _rayQuery = new();
+	private PhysicsShapeQueryParameters3D _shapeQuery = new();
 
 	private Dictionary<string, bool> _segVisCache = [];
 	private Dictionary<Vector3I, bool> _pFreeCache = [];
@@ -1116,6 +1115,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 #endif
 
 #if DEBUG
+	SpatialAudioDebug audioDebugger = null;
 	ImmediateMesh _debugMesh = null;
 	MeshInstance3D _debugInstance = null;
 	bool _debugWasDrawing = false;
@@ -1128,22 +1128,24 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	/// <inheritdoc />
 	public override void _Ready()
 	{
-		if (Engine.IsEditorHint()) EditorReady();
+		if (Engine.IsEditorHint() && !PreviewPathingInEditor)
+		{
+			SetProcess(true);
+			ResetAudioProxyToOrigin();
+			editorInterface = EditorInterface.Singleton;
+		}
+		else UpdateAudio(0.0f);
 
 		_clearanceShape.Radius = ClearanceRadius;
-		_shapeQuery = new()
-		{
-			CollisionMask = CollisionMask,
-			CollideWithAreas = CollideWithAreas,
-			CollideWithBodies = CollideWithBodies,
-		};
-		_rayQuery = new()
-		{
-			CollisionMask = CollisionMask,
-			CollideWithAreas = CollideWithAreas,
-			CollideWithBodies = CollideWithBodies,
-			HitFromInside = true,
-		};
+		_shapeQuery.Shape = _clearanceShape;
+		_shapeQuery.CollisionMask = CollisionMask;
+		_shapeQuery.CollideWithAreas = CollideWithAreas;
+		_shapeQuery.CollideWithBodies = CollideWithBodies;
+
+		_rayQuery.CollisionMask = CollisionMask;
+		_rayQuery.CollideWithAreas = CollideWithAreas;
+		_rayQuery.CollideWithBodies = CollideWithBodies;
+		_rayQuery.HitFromInside = true;
 
 		if (CaptureFixedOriginOnReady) FixedWorldOrigin = ResolveNodeOrigin();
 
@@ -1988,12 +1990,13 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private void UpdateAudio(double delta)
 	{
 		if (AudioPlayerNode == null || !IsInstanceValid(AudioPlayerNode))
-		{ GetAudioPlayer(); if (AudioPlayerNode == null) return; }
+		{ GetAudioPlayer(); if (AudioPlayerNode == null) { return; } }
 
 		Vector3 worldOrigin = ResolveWorldOrigin();
 		Vector3 worldListener = _lastWorldTarget;
 		if (_hasValidPath && _currentPath.Length > 0) worldListener = _currentPath[^1];
 		else if (GetTargetNode() != null) worldListener = GetTargetNode().GlobalPosition;
+
 		if (!MoveAudioPlayer)
 		{
 			_proxyInBackoff = false;
@@ -2041,7 +2044,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		UpdateProxyInnerRadius(refActive, worldOrigin, _currentProxy);
 		UpdateProxyOccl(refActive);
 #if DEBUG
-		UpdateExtNavDebug(false, worldOrigin, worldListener);
+		UpdateExtNavDebug(refActive, worldOrigin, worldListener);
 #endif
 		EmitSignal(SignalName.AudioProxyPosUpdated, _currentProxy);
 	}
@@ -2329,16 +2332,17 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private Node3D GetTargetNode()
 	{
 		if (TargetOverride != null) return TargetOverride;
-
+#if TOOLS
 		if (Engine.IsEditorHint())
 		{
 			Viewport vp = editorInterface.GetEditorViewport3D();
 			if (vp != null) return vp.GetCamera3D();
 			return null;
 		}
+#endif
 		return GetViewport().GetCamera3D();
 	}
-	
+
 	private Vector3 RandomPointInSphere(RandomNumberGenerator rng, float navigationRadius)
 	{
 		Vector3 p = Vector3.Zero;
@@ -2358,15 +2362,6 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	#endregion
 
 	#region Editor Config
-
-	private void EditorReady()
-	{
-		if (!PreviewPathingInEditor) { SetProcess(true); ResetAudioProxyToOrigin(); }
-		UpdateConfigurationWarnings();
-		UpdateAudio(0.0f);
-
-		editorInterface = EditorInterface.Singleton;
-	}
 
 	private bool IsEditorSelected()
 	{
@@ -2394,7 +2389,6 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		List<string> warnings = [];
 
-		Node3D configuredAudio = GetAudioPlayer();
 		bool foundSpatial = IsSpatialAudioPlayerFound();
 
 		if (!foundSpatial)
@@ -2402,26 +2396,26 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			warnings.Add($"No SpatialAudioPlayer3D was found. Add one as a child or assign one in {AudioPlayerNode} for reflected proxy playback.");
 		}
 
-		if (configuredAudio != null && configuredAudio is AudioStreamPlayer3D && configuredAudio is not SpatialAudioPlayer3D)
-		{
-			warnings.Add($"Detected audio player is {configuredAudio.Name}, this is not a compatable, " +
-			"proxy reflection integration requires a SpatialAudioPlayer3D to function correctly.");
-		}
-		else if (configuredAudio != null && configuredAudio is not AudioStreamPlayer3D)
-		{
-			warnings.Add($"{nameof(AudioPlayerNode)} points to {configuredAudio.Name}, which is not a " +
-			"SpatialAudioPlayer3D. Assign a SpatialAudioPlayer3D for reflected proxy playback.");
-		}
-
 		return [.. warnings];
 	}
 
-	private Node3D GetAudioPlayer()
+	private SpatialAudioPlayer3D GetAudioPlayer()
 	{
 		if (AudioPlayerNode != null && IsInstanceValid(AudioPlayerNode)) return AudioPlayerNode;
-		if (AutoFindAudioPlayerChild) return FindAudioPlayer(this);
+		if (AutoFindAudioPlayerChild)
+		{
+			AudioPlayerNode = FindAudioPlayer(this);
+			return AudioPlayerNode;
+		}
 		RefreshProxyRadius();
 		return null;
+	}
+	
+	private void GetAudioDebug()
+	{
+		if (AudioPlayerNode == null) return;
+
+		audioDebugger = (SpatialAudioDebug)AudioPlayerNode.GetChild(0);
 	}
 
 	/// <inheritdoc />
@@ -2801,7 +2795,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private void UpdateExtNavDebug(bool refActive, Vector3 worldOrigin, Vector3 worldListener)
 	{
-		if (audioDebugger == null || !IsInstanceValid(audioDebugger)) return;
+		if (audioDebugger == null || !IsInstanceValid(audioDebugger)) GetAudioDebug();
 
 		if (!refActive)
 		{
@@ -2826,6 +2820,13 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		info.TryAdd("proxy_to_listener", _currentProxy.DistanceTo(worldListener));
 		info.TryAdd("proxy_to_origin", _currentProxy.DistanceTo(worldOrigin));
 		info.TryAdd("proxy_to_target", _currentProxy.DistanceTo(_targetProxy));
+		info.TryAdd("proxy_backoff_active", _proxyInBackoff);
+		info.TryAdd("spring_arm_active", ProxySpringArmEnabled);
+		info.TryAdd("spring_arm_distance_from_end", _springArmDistFromEnd);
+		info.TryAdd("proxy_waypoint_index", ProxyWaypointIndex);
+		info.TryAdd("update_hz", UpdateInterval > 0.0f ? 1.0 / UpdateInterval : 0.0f);
+
+		audioDebugger.SetExtNavDebugData(true, info);
 	}
 
 	private void ResetAudioProxyToOrigin()
