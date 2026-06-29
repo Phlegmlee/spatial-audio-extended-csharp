@@ -1164,9 +1164,17 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 		if (editorPreview)
 		{
-			if (editorSelected && _timeAccum < UpdateInterval)
-			{ _timeSinceRecompute += delta; _timeAccum += delta; }
-			else { _timeAccum = 0.0; RecomputePath(); }
+			if (editorSelected)
+			{
+				_timeSinceRecompute += delta;
+				_timeAccum += delta;
+				if (_timeAccum >= UpdateInterval)
+				{
+					_timeAccum = 0.0f;
+					RecomputePath();
+				}
+			}
+			else _timeAccum = 0.0;
 
 			DrawDebug(editorSelected);
 
@@ -1176,7 +1184,10 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		_timeSinceRecompute += delta;
 		_timeAccum += delta;
 		if (_timeAccum >= UpdateInterval)
-		{ _timeAccum = 0.0; RecomputePath(); }
+		{
+			_timeAccum = 0.0;
+			RecomputePath(); 
+		}
 		UpdateAudio(delta);
 		DrawDebug(false);
 	}
@@ -2796,6 +2807,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private void UpdateExtNavDebug(bool refActive, Vector3 worldOrigin, Vector3 worldListener)
 	{
 		if (audioDebugger == null || !IsInstanceValid(audioDebugger)) GetAudioDebug();
+
+		if (audioDebugger == null) return;
 
 		if (!refActive)
 		{
