@@ -1256,7 +1256,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 		float[] startLinks = FindDynamicLinks(space, worldOrigin, worldTarget, exclusions);
 		float[] goalLinks = FindDynamicLinks(space, worldTarget, worldOrigin, exclusions);
-		if (startLinks.Length == 0 || goalLinks.Length == 0)
+		if (startLinks.IsEmpty() || goalLinks.IsEmpty())
 		{
 			SetFailedPath(worldOrigin, worldTarget, true);
 			CommitSolveState(worldOrigin, worldTarget);
@@ -1858,18 +1858,19 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		List<float> candidates = [];
 		int keepCount = Math.Max(DynamicConnectionLimit * Math.Max(DynamicCanidateMultiplier, 1), DynamicConnectionLimit + 2);
 
-		for (int i = 0; i < _graphPoints.Count; i++)
+		for (int i = 0; i < _graphPoints.Count - 1; i++)
 		{
 			Vector3 point = _graphPoints[i];
 			float score = worldOrigin.DistanceSquaredTo(point) + point.DistanceSquaredTo(worldTarget) * 0.25f;
 			InsertSortedPair(candidates, score, i, keepCount);
 		}
 
-		foreach (int candi in candidates)
+		foreach (float candi in candidates)
 		{
 			if (candidates.Count >= DynamicConnectionLimit) break;
-			int idx = candi;
-			if (IsSegmentClear(space, worldOrigin, _graphPoints[idx], exclusions)) candidates.Add(idx);
+			int idx = (int)candi;
+			if (IsSegmentClear(space, worldOrigin, _graphPoints[idx], exclusions)) 
+			{ candidates.Add(idx); }
 		}
 		return [.. candidates];
 	}
@@ -1878,7 +1879,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		List<float> pair = [score, idx];
 		bool inserted = false;
-		for (int i = 0; i < store.Count; i++)
+		for (int i = 0; i < store.Count - 1; i++)
 		{
 			if (score < store[i])
 			{
@@ -1886,13 +1887,13 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 				inserted = true;
 				break;
 			}
-			if (!inserted)
-			{
-				if (store.Count < limit) store.AddRange(pair);
-				else return;
-			}
-			if (store.Count > limit) store.Resize(limit);
 		}
+		if (!inserted)
+		{
+			if (store.Count < limit) store.AddRange(pair);
+			else return;
+		}
+		if (store.Count > limit) store.Resize(limit);
 	}
 
 	#endregion
