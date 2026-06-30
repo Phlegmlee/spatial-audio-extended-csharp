@@ -1,5 +1,5 @@
 # Spatial Audio Extended
-![Static Badge](https://img.shields.io/badge/REWRITE_STATUS-IN_PROGRESS_55%25-orange)
+![Static Badge](https://img.shields.io/badge/REWRITE_STATUS-IN_PROGRESS_70%25-orange)
 [![maintained](https://img.shields.io/badge/Status-REWRITE-red.svg)](CHANGES.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.md)
 [![documentation](https://img.shields.io/badge/Documentation-yellow)](https://phlegmlee.github.io/godot-portals-plugin-csharp/)

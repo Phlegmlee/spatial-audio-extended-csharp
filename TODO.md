@@ -4,9 +4,10 @@
 - [ ] Rewrite plugin into C#
   - [x] AcousticBody
   - [x] AcousticMaterial
-  - [ ] SpatialReflectionNavigationAgent
+  - [x] SpatialReflectionNavigationAgent
+    - [ ] Debug nav agent
   - [x] SpatialAudioPlayer3D
-  - [ ] SpatialAudioDebug
+  - [x] SpatialAudioDebug
   - [x] Preset materials
 - [ ] Example Level
   - [ ] Create an example level that tests all functionality and can also be used as a demo.
