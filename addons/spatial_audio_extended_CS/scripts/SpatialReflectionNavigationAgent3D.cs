@@ -1293,9 +1293,9 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private Vector3[] FindPathGreedyAStar(Vector3 worldOrigin, Vector3 worldTarget, float[] startLinks, float[] goalLinks)
 	{
 		Dictionary<int, bool> goalSet = [];
-		foreach (int idx in goalLinks) goalSet[idx] = true;
+		foreach (float idx in goalLinks) goalSet[(int)idx] = true;
 
-		List<List<float>> frontier = [];
+		List<float[]> frontier = [];
 		HeapPush(frontier, [0.0f, 0]); // [fScore, nodeId]
 
 		Dictionary<float, float> travelCost = new() { { 0, 0.0f }, };
@@ -1303,7 +1303,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 		while (!(frontier.Count == 0))
 		{
-			List<float> best = HeapPop(frontier);
+			float[] best = HeapPop(frontier);
 			float bestF = best[0];
 			float bestId = best[1];
 
@@ -1390,24 +1390,23 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		if (blocked) EmitSignal(SignalName.PathFailed, origin, target);
 	}
 
-	private void HeapPush(List<List<float>> heap, List<float> item)
+	private void HeapPush(List<float[]> heap, float[] item)
 	{
 		heap.Add(item);
 		int i = heap.Count - 1;
-		do
+		while (i > 0)
 		{
 			int p = (i - 1) >> 1;
 			if (heap[p][0] <= heap[i][0]) break;
 			(heap[i], heap[p]) = (heap[p], heap[i]);
 			i = p;
 		}
-		while (i > 0);
 	}
 
-	private List<float> HeapPop(List<List<float>> heap)
+	private float[] HeapPop(List<float[]> heap)
 	{
-		List<float> top = heap[0];
-		List<float> last = heap[^1];
+		float[] top = heap[0];
+		float[] last = heap[^1];
 		heap.RemoveAt(heap.Count - 1);
 
 		if (!(heap.Count == 0))
