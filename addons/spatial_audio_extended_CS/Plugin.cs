@@ -24,6 +24,7 @@ public partial class Plugin : EditorPlugin
 
 	private void OnSelectionChanged()
 	{
+		editorInterface ??= EditorInterface.Singleton;
 		EditorSelections = editorInterface.GetSelection().GetSelectedNodes();
 
 		if (EditorSelections.Count < 1) return;
