@@ -1478,7 +1478,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		if (id == 0) return worldOrigin;
 		if (id == 1) return worldTarget;
-		if (id - 2 <= _graphPoints.Count) return _graphPoints[id - 2];
+		if (id - 2 < 0) return _graphPoints[id - 2];
 		return Vector3.Zero;
 	}
 
