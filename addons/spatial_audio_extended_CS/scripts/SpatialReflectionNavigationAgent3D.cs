@@ -2457,6 +2457,23 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			}
 		}
 
+		List<StringName> overrideProps =
+		[
+			PropertyName.OriginLocalOffset,
+			PropertyName.FixedWorldOrigin,
+			PropertyName.CaptureFixedOriginOnReady,
+		];
+		if (OriginOverride == null)
+		{
+			foreach (StringName prop in overrideProps)
+			{
+				if ((StringName)property["name"] == prop)
+				{
+					property["usage"] = (int)~PropertyUsageFlags.Editor;
+				}
+			}
+		}
+
 		List<StringName> scanProps =
 		[
 			PropertyName.ScanCellSize,
