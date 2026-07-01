@@ -2421,8 +2421,9 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	private void GetAudioDebug()
 	{
 		if (AudioPlayerNode == null) return;
-
-		audioDebugger = (SpatialAudioDebug)AudioPlayerNode.GetChild(0);
+		SpatialAudioDebug result = AudioPlayerNode.GetChildOrNull<SpatialAudioDebug>(0);
+		if (result == null || !IsInstanceValid(result)) return;
+		audioDebugger = result;
 	}
 
 	/// <inheritdoc />
