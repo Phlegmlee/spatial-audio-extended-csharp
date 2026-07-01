@@ -1307,12 +1307,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			float bestF = best[0];
 			float bestId = best[1];
 
-			if (!travelCost.TryGetValue(bestId, out float currentG))
-			{
-				currentG = float.PositiveInfinity;
-				travelCost.Add(bestId, currentG);
-				continue;
-			}
+			float currentG = travelCost.TryGetValue(bestId, out float bestCost) ? bestCost : float.PositiveInfinity;
+			if (currentG == float.PositiveInfinity) continue;
 
 			float expectedF = currentG + EstimateCost(IdToPoint((int)bestId, worldOrigin, worldTarget), worldTarget);
 			if (bestF > expectedF + 0.0001f) continue;
@@ -1328,11 +1324,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 					IdToPoint(n, worldOrigin, worldTarget)
 				);
 				float nextG = currentG + moveCost;
-				if (travelCost.TryGetValue(n, out float nTCost))
-				{
-					nTCost = float.PositiveInfinity;
-					travelCost.Add(n, nTCost);
-				}
+				float nTCost = travelCost.TryGetValue(n, out float nCost) ? nCost : float.PositiveInfinity;
 				if (nextG < nTCost)
 				{
 					travelCost[n] = nextG;
@@ -1412,20 +1404,20 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		if (!(heap.Count == 0))
 		{
 			heap[0] = last;
-			byte exit = 0;
 			int i = 0;
-			do
+			while (true)
 			{
 				int l = i * 2 + 1;
 				int r = l + 1;
-				if (l >= heap.Count) exit++;
+				if (l >= heap.Count) break;
+
 				int m = l;
 				if (r < heap.Count && heap[r][0] < heap[l][0]) m = r;
-				if (heap[i][0] <= heap[m][0]) exit++;
+				if (heap[i][0] <= heap[m][0]) break;
+
 				(heap[m], heap[i]) = (heap[i], heap[m]);
 				i = m;
 			}
-			while (exit == 0);
 		}
 		return top;
 	}
@@ -1455,17 +1447,20 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		if (id == 1) return [];
 		if (id == 0)
 		{
-			foreach (int link in startLinks)
+			foreach (float link in startLinks)
 			{
-				result.Add(link + 2);
+				result.Add((int)link + 2);
 			}
 			return [.. result];
 		}
 
 		int graphIdx = id - 2;
-		foreach (int edge in _graphEdges[graphIdx])
+		if (graphIdx <= _graphEdges.Count)
 		{
-			result.Add(edge + 2);
+			foreach (int edge in _graphEdges[graphIdx])
+			{
+				result.Add(edge + 2);
+			}
 		}
 
 		if (goalSet.ContainsKey(graphIdx)) result.Add(1);
@@ -1483,7 +1478,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		if (id == 0) return worldOrigin;
 		if (id == 1) return worldTarget;
-		return _graphPoints[id - 2];
+		if (id - 2 <= _graphPoints.Count) return _graphPoints[id - 2];
+		return Vector3.Zero;
 	}
 
 	private Vector3[] TryReuseCachedPath
@@ -2118,7 +2114,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		if (_proxyInBackoff)
 		{
 			float backoffDist = MathF.Max(ProxyBackoffPathDistance, ProxyMinListenerDistance);
-			tarPoint = GetPointAlongPath(_currentPath, backoffDist); 
+			tarPoint = GetPointFromEnd(_currentPath, backoffDist); 
 		}
 		
 		return tarPoint;
@@ -2183,7 +2179,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 		}
 
 		_springArmDistFromEnd = Math.Clamp(_springArmDistFromEnd, 0.0f, pathTot);
-		return GetPointAlongPath(_currentPath, _springArmDistFromEnd);
+		return GetPointFromEnd(_currentPath, _springArmDistFromEnd);
 	}
 
 	#endregion
@@ -2258,14 +2254,14 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	/// <summary>
 	/// Get a point along the path from the end.
 	/// </summary>
-	private Vector3 GetPointAlongPath(Vector3[] worldPath, float backoffDist)
+	private Vector3 GetPointFromEnd(Vector3[] worldPath, float backoffDist)
 	{
 		if (worldPath.IsEmpty()) return Vector3.Zero;
 		if (worldPath.Length == 1) return worldPath[0];
 
 		float remain = MathF.Max(backoffDist, 0.0f);
 
-		for (int i = 0; i < worldPath.Length - 1; i++)
+		for (int i = worldPath.Length - 1; i > 0; i--)
 		{
 			Vector3 segEnd = worldPath[i];
 			Vector3 segStart = worldPath[i - 1];
