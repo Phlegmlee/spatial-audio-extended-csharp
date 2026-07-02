@@ -428,6 +428,9 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	}
 
 	private float _heuristicWeight = 1.0f;
+	/// <summary>
+	/// Weight (w) used in Greedy A* estimated cost.
+	/// </summary>
 	[Export(PropertyHint.Range, "0.1f, 5.0f, 0.05f")]
 	public float HeuristicWeight
 	{
@@ -720,7 +723,7 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 
 	private bool _autoFindAudioPlayerChild = true;
 	/// <summary>
-	/// If true and audio_player_node is empty, auto-find first AudioStreamPlayer3D child.
+	/// If true and AudioPlayerNode is null, auto-find the first SpatialAudioPlayer child.
 	/// </summary>
 	[ExportGroup("Audio Proxy")]
 	[Export]
@@ -1478,7 +1481,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 	{
 		if (id == 0) return worldOrigin;
 		if (id == 1) return worldTarget;
-		return (id - 2 >= 0 || id - 2 <= _graphPoints.Count) ? _graphPoints[id - 2] : worldTarget;
+		int idx = id - 2;
+		return (idx >= 0 && !(idx > _graphPoints.Count)) ? _graphPoints[idx] : worldTarget;
 	}
 
 	private Vector3[] TryReuseCachedPath
