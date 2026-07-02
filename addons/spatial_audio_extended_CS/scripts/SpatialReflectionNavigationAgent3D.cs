@@ -2044,8 +2044,8 @@ public partial class SpatialReflectionNavigationAgent3D : Node3D
 			_currentProxy = _currentProxy with
 			{
 				X = float.Lerp(_currentProxy.X, _targetProxy.X, lerpAmt),
-				Y = float.Lerp(_currentProxy.X, _targetProxy.X, lerpAmt),
-				Z = float.Lerp(_currentProxy.X, _targetProxy.X, lerpAmt)
+				Y = float.Lerp(_currentProxy.Y, _targetProxy.Y, lerpAmt),
+				Z = float.Lerp(_currentProxy.Z, _targetProxy.Z, lerpAmt)
 			};
 		}
 
